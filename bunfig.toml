@@ -1,0 +1,3 @@
+[install]
+# Workspace configuration for Bun
+auto = true

@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["vitest/globals"],
+    "skipLibCheck": true,
+    "baseUrl": "./",
+    "paths": {
+      "~/*": ["src/*"],
+      "effect-supermemory/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "@services/*": ["./services/*"],
+      "@test/*": ["./test/*"]
+    },
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service"
+      }
+    ]
+  },
+  "include": ["src", "test", "services", "scripts", "vitest.config.ts"]
+}

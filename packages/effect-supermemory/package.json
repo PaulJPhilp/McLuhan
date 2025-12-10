@@ -1,0 +1,58 @@
+{
+  "name": "effect-supermemory",
+  "version": "0.2.0",
+  "description": "Effect-native client abstractions for Supermemory long-term memory API",
+  "private": false,
+  "type": "module",
+  "packageManager": "bun@1.1.33",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PaulJPhilp/effect-supermemory.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:compatibility": "vitest run test/compatibility",
+    "codegen": "bun run scripts/codegen.ts",
+    "lint": "biome check .",
+    "format": "biome check .",
+    "format:fix": "biome format --write ."
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.18"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.7",
+    "@effect/language-service": "^0.57.1",
+    "@effect/platform-node": "^0.103.0",
+    "@effect/vitest": "^0.25.1",
+    "@types/node": "^20.19.25",
+    "@types/ws": "^8.18.1",
+    "effect": "^3.19.9",
+    "openapi-typescript": "^7.10.1",
+    "supermemory": "3.10.0",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.9.3",
+    "ultracite": "6.3.6",
+    "vitest": "^4.0.15"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.93.6",
+    "@effect/schema": "^0.75.5",
+    "effect-env": "^0.1.1",
+    "effect-json": "^0.2.0",
+    "jsonc-parser": "^3.3.1"
+  }
+}

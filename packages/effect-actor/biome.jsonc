@@ -1,0 +1,32 @@
+{
+  "extends": [
+    "ultracite"
+  ],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "overrides": [
+    {
+      "include": [
+        "*.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "*.md"
+      ],
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
+}

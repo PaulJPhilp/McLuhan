@@ -1,0 +1,72 @@
+{
+  "name": "effect-actor",
+  "version": "0.3.0",
+  "description": "Effect-native state machine orchestration framework",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "effect",
+    "actor",
+    "state-machine",
+    "orchestration",
+    "workflow",
+    "typescript",
+    "functional-programming"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PaulJPhilp/effect-actor.git"
+  },
+  "homepage": "https://github.com/PaulJPhilp/effect-actor#readme",
+  "bugs": {
+    "url": "https://github.com/PaulJPhilp/effect-actor/issues"
+  },
+  "author": "Paul J. Philp",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "build": "tsc",
+    "lint": "biome check .",
+    "format": "biome format . --write",
+    "precommit": "lint-staged"
+  },
+  "dependencies": {
+    "effect": "^3.18.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "latest",
+    "@vitest/ui": "latest",
+    "biome": "latest",
+    "happy-dom": "latest",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest"
+  },
+  "peerDependencies": {
+    "effect": ">=latest"
+  },
+  "engines": {
+    "bun": ">=1.0",
+    "node": ">=18"
+  }
+}
