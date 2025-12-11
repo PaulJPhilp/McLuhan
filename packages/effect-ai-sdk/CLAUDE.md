@@ -300,6 +300,15 @@ The package has `exactOptionalPropertyTypes: true` which causes strict type chec
 - OpenAI and Anthropic providers have full streaming support
 - Other providers may have limited or no streaming capability
 
+### Security Updates
+- **CVE-2025-48985 (Fixed in v5.0.52):** Input validation bypass in prompt conversion
+- All users should update to v5.0.52+ immediately
+
+### Version Pinning
+- Using caret ranges (`^5.0.109`) for patch/minor updates
+- Provider packages pinned to v1.x for stability
+- Manual review required before major version updates
+
 ## Future Enhancements
 
 1. **Comprehensive Test Suite** - Unit tests for all operations
@@ -333,6 +342,24 @@ When adding new features:
 4. Use discriminated errors (`Data.TaggedError`)
 5. Add tests in `test/` directory
 6. Update CLAUDE.md with new capabilities
+
+## Version History
+
+### Current Versions (as of 2025-12-10)
+- **Vercel AI SDK:** v5.0.109 (includes CVE-2025-48985 security fix)
+- **Provider Packages:** v1.x (stable)
+- **@ai-sdk/provider:** v2.0.0 (v2 spec required for AI SDK 5)
+
+### Update History
+- **2025-12-10:** Updated from v5.0.0 to v5.0.109
+  - Security fix: CVE-2025-48985 (input validation bypass)
+  - Bug fixes: streaming, error handling, abort signals
+  - Improved type safety for message parts
+
+### Known Compatibility Notes
+- Provider packages v2.x available but not yet adopted (breaking changes)
+- Zod v4 available but staying on v3.x (tool compatibility)
+- Effect.Schema preferred over Zod for new features
 
 ## References
 

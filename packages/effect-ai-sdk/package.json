@@ -35,14 +35,14 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/deepseek": "^0.2.14",
-    "@ai-sdk/google": "^1.2.19",
+    "@ai-sdk/deepseek": "^0.2.16",
+    "@ai-sdk/google": "^1.2.22",
     "@ai-sdk/groq": "^1.2.9",
-    "@ai-sdk/openai": "^1.3.22",
+    "@ai-sdk/openai": "^1.3.24",
     "@ai-sdk/perplexity": "^1.1.9",
     "@ai-sdk/provider": "^2.0.0",
-    "@ai-sdk/xai": "^1.2.16",
-    "ai": "^5.0.0",
+    "@ai-sdk/xai": "^1.2.18",
+    "ai": "^5.0.109",
     "zod": "^3.23.8"
   },
   "devDependencies": {
