@@ -1,17 +1,23 @@
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
 import { loadKitConfig, saveKitConfig } from "@kits/config";
 import type { KitConfig } from "@kits/types";
 import { Effect } from "effect";
+import * as fs from "node:fs/promises";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const TEST_HOMEDIR = path.join(os.tmpdir(), "effect-cli-tui-test-config");
+const TEST_HOMEDIR = path.join(tmpdir(), "effect-cli-tui-test-config");
 
-vi.mock("node:os", () => ({
-  homedir: () => TEST_HOMEDIR,
-  tmpdir: os.tmpdir,
-}));
+vi.mock("node:os", async (importOriginal) => {
+  const original = await importOriginal<typeof import("node:os")>();
+  return {
+    ...original,
+    homedir: () => path.join(original.tmpdir(), "effect-cli-tui-test-config"),
+  };
+});
+
+// Import os after mock is set up
+const os = await import("node:os");
 
 const CONFIG_DIR_NAME = ".effect-cli-tui";
 const CONFIG_FILE_NAME = "kits.json";

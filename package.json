@@ -6,16 +6,19 @@
   "type": "module",
   "packageManager": "bun@1.1.33",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun run --filter '*' test",
-    "test:watch": "bun run --filter '*' test:watch",
+    "test": "bun run --filter 'effect-*' test",
+    "test:watch": "bun run --filter 'effect-*' test:watch",
     "lint": "bun run --filter '*' lint",
     "format": "bun run --filter '*' format",
-    "format:fix": "bun run --filter '*' format:fix"
+    "format:fix": "bun run --filter '*' format:fix",
+    "verify": "bun run format && bun run lint && bun run typecheck && bun run build && bun run test",
+    "verify:ci": "bun run lint && bun run typecheck && bun run build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.7",

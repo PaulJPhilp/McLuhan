@@ -1,0 +1,13 @@
+{
+    "vitest.disableWorkspaceWarning": true,
+    "[markdown]": {
+        "editor.formatOnSave": false
+    },
+    "markdown.linting.enabled": false,
+    "markdownlint.enable": false,
+    "markdownlint.run": "onSave",
+    "files.exclude": {
+        "**/*.md": false
+    },
+    "problems.decorations.enabled": false
+}

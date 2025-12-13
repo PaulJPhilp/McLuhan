@@ -1,0 +1,37 @@
+{
+    "name": "@mcluhan/chat",
+    "version": "0.1.0",
+    "description": "Effect-native chat UI inspired by assistant-ui, with Hume AI integration",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "format": "biome format .",
+        "format:fix": "biome format --write ."
+    },
+    "dependencies": {
+        "effect": "^3.0.0",
+        "effect-ai-sdk": "workspace:*",
+        "effect-actor": "workspace:*",
+        "effect-supermemory": "workspace:*",
+        "hume": "^0.7.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-markdown": "^9.0.1",
+        "clsx": "^2.1.0"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.7",
+        "@types/react": "^18.3.0",
+        "@types/react-dom": "^18.3.0",
+        "typescript": "^5.9.3",
+        "vite": "^6.0.0",
+        "@vitejs/plugin-react": "^4.3.0",
+        "tailwindcss": "^3.4.1",
+        "postcss": "^8.4.32",
+        "autoprefixer": "^10.4.17"
+    }
+}

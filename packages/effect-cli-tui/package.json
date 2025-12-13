@@ -64,6 +64,8 @@
     "test:real-cli": "vitest run --config vitest.real-cli.config.mjs",
     "lint": "biome check src __tests__",
     "format": "biome format src __tests__ docs",
+    "format:fix": "biome format src __tests__ docs --write",
+    "typecheck": "bun run type-check",
     "type-check": "tsc --noEmit",
     "docs:generate": "typedoc --plugin typedoc-plugin-markdown --entryPointStrategy resolve --out docs/api src/index.ts src/components.ts src/theme.ts src/services.ts src/constants.ts src/types.ts",
     "prepublishOnly": "bun run build && bun run test"

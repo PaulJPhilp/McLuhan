@@ -18,13 +18,13 @@
     "test:compatibility": "vitest run test/compatibility",
     "codegen": "bun run scripts/codegen.ts",
     "lint": "biome check .",
-    "format": "biome check .",
+    "format": "biome format .",
     "format:fix": "biome format --write ."
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
     }
   },
   "files": [

@@ -43,8 +43,10 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check .",
-    "format": "biome format . --write",
+    "format": "biome format .",
+    "format:fix": "biome format . --write",
     "precommit": "lint-staged"
   },
   "dependencies": {

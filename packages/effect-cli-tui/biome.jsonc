@@ -1,9 +1,11 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/core", "ultracite/react"],
+  "extends": [
+    "ultracite/core",
+    "ultracite/react"
+  ],
   "files": {
-    "ignoreUnknown": true,
-    "includes": ["**", "!!**/*.md"]
+    "ignoreUnknown": true
   },
   "linter": {
     "rules": {
@@ -20,5 +22,15 @@
         "useYield": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": [
+        "*.md"
+      ],
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
 }

@@ -1,0 +1,20 @@
+{
+    "extends": "../../biome.jsonc",
+    "overrides": [
+        {
+            "include": [
+                "src/**/*.tsx"
+            ],
+            "linter": {
+                "rules": {
+                    "react": {
+                        "rules": {
+                            "reactCorrectMemorization": "warn",
+                            "reactMissingKey": "error"
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
