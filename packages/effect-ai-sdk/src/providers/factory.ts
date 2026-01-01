@@ -7,7 +7,6 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGateway } from "@ai-sdk/gateway";
 import * as Effect from "effect/Effect";
 import { AiSdkConfigError, AiSdkProviderError } from "../errors.js";
 
@@ -22,8 +21,7 @@ export type ProviderName =
   | "perplexity"
   | "qwen"
   | "xai"
-  | "groq"
-  | "gateway";
+  | "groq";
 
 /**
  * Provider configuration options
@@ -106,13 +104,6 @@ export function createProvider(
             baseURL:
               config.baseURL ||
               "https://dashscope.aliyuncs.com/compatible-mode/v1",
-          });
-
-        case "gateway":
-          // Vercel AI Gateway with v2 specification models
-          return createGateway({
-            apiKey: config.apiKey,
-            baseURL: config.baseURL,
           });
 
         default:
@@ -226,10 +217,10 @@ export function getEmbeddingModel(
       }
 
       if (
-        provider.textEmbedding &&
-        typeof provider.textEmbedding === "function"
+        provider.embedding &&
+        typeof provider.embedding === "function"
       ) {
-        return provider.textEmbedding(modelId);
+        return provider.embedding(modelId);
       }
 
       return yield* Effect.fail(

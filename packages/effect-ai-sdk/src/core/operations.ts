@@ -218,7 +218,7 @@ export function generateObject<T>(
  * Generate embeddings for text inputs
  */
 export function generateEmbeddings(
-  model: EmbeddingModel<string>,
+  model: EmbeddingModel,
   texts: string[]
 ): Effect.Effect<
   EffectiveResponse<GenerateEmbeddingsResult>,
