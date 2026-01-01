@@ -121,6 +121,133 @@ export function toEffectiveMessages(messages: CoreMessage[], modelId: string): E
 | xAI (Grok) | ✅ | ❌ | ❌ | ❌ |
 | Qwen (Alibaba) | ✅ | ❌ | ❌ | ❌ |
 
+## Global Model Types (types/models.ts)
+
+**New in v5.0.117+:** Comprehensive type definitions for all supported providers and models.
+
+### Type-Safe Provider and Model Selection
+
+```typescript
+import type {
+  SupportedProvider,
+  SupportedLanguageModel,
+  OpenAIModel,
+  AnthropicModel,
+  ProviderModelMap,
+} from "effect-ai-sdk"
+import { isSupportedModel, PROVIDER_MODELS, PROVIDER_CAPABILITIES } from "effect-ai-sdk"
+
+// Type-safe provider selection
+const provider: SupportedProvider = "openai"
+
+// Type-safe model selection
+const model: OpenAIModel = "gpt-5o"
+
+// Check if combination is supported
+if (isSupportedModel("openai", "gpt-4o")) {
+  // Safe to use
+}
+
+// Get all models for a provider
+const openaiModels = PROVIDER_MODELS.openai // ["gpt-5o", "gpt-4o", "gpt-4-turbo", ...]
+
+// Check provider capabilities
+const caps = PROVIDER_CAPABILITIES.openai
+console.log(caps.streaming) // true
+console.log(caps.vision) // true
+```
+
+### Available Models by Provider
+
+**OpenAI** (`OpenAIModel`)
+- `gpt-5o` - Latest GPT-5 Omni model (128K context, 4K output)
+- `gpt-4o` - Latest GPT-4 Omni model (128K context, 4K output)
+- `gpt-4-turbo` - Previous generation turbo (128K context, 4K output)
+- `gpt-4` - Original GPT-4 (8K context, 8K output)
+- `gpt-3.5-turbo` - Legacy fast model (16K context, 4K output)
+
+**Anthropic** (`AnthropicModel`)
+- `claude-3-5-sonnet-20241022` - Latest Sonnet model
+- `claude-3-opus-20240229` - Most capable model
+- `claude-3-sonnet-20240229` - Balanced model
+- `claude-3-haiku-20240307` - Fastest model
+
+**Google** (`GoogleModel`)
+- `gemini-2.0-flash` - Latest Flash model (1M context)
+- `gemini-1.5-pro` - High-capability model (1M context)
+- `gemini-1.5-flash` - Fast model (1M context)
+- `gemini-1.0-pro` - Previous generation model
+
+**Groq** (`GroqModel`)
+- `mixtral-8x7b-32768` - Mixture of experts
+- `llama2-70b-4096` - Meta's Llama 2 70B
+- `gemma-7b-it` - Google's lightweight model
+
+**DeepSeek** (`DeepSeekModel`)
+- `deepseek-coder` - Code generation specialist
+- `deepseek-chat` - General-purpose chat
+
+**Perplexity** (`PerplexityModel`)
+- `pplx-70b-online` - 70B with real-time web access
+- `pplx-7b-online` - 7B with real-time web access
+- `pplx-70b-chat` - Offline 70B chat
+- `pplx-7b-chat` - Offline 7B chat
+
+**xAI** (`XaiModel`)
+- `grok-2` - Latest Grok reasoning model
+- `grok-1` - Previous generation Grok
+
+**Qwen** (`QwenModel`)
+- `qwen-turbo` - Fast Qwen model
+- `qwen-plus` - Balanced Qwen model
+- `qwen-max` - Most capable Qwen model
+
+### Provider Capabilities Matrix
+
+```typescript
+import { PROVIDER_CAPABILITIES } from "effect-ai-sdk"
+
+// Check what a provider supports
+const openaiCaps = PROVIDER_CAPABILITIES.openai
+console.log(openaiCaps.streaming) // true
+console.log(openaiCaps.vision) // true
+console.log(openaiCaps.toolCalling) // true
+console.log(openaiCaps.maxInputTokens) // 128000
+
+// Compare providers
+const anthropicCaps = PROVIDER_CAPABILITIES.anthropic
+console.log(anthropicCaps.embedding) // false - Anthropic doesn't support embeddings
+```
+
+### Provider Comparison and Selection
+
+```typescript
+import { PROVIDER_COMPARISON } from "effect-ai-sdk"
+
+// Find providers by use case
+PROVIDER_COMPARISON.lowestLatency // ["groq"]
+PROVIDER_COMPARISON.bestReasoning // ["openai", "anthropic", "google"]
+PROVIDER_COMPARISON.largestContext // ["google", "qwen"]
+PROVIDER_COMPARISON.withVision // ["openai", "anthropic", "google"]
+PROVIDER_COMPARISON.withToolCalling // ["openai", "anthropic", ...]
+PROVIDER_COMPARISON.mostAffordable // ["groq", "qwen"]
+```
+
+### Provider Configuration
+
+```typescript
+import { PROVIDER_AUTH_CONFIG, PROVIDER_BASE_URLS } from "effect-ai-sdk"
+
+// Get authentication requirements
+const authConfig = PROVIDER_AUTH_CONFIG.openai
+console.log(authConfig.apiKeyEnvVar) // "OPENAI_API_KEY"
+console.log(authConfig.supportsOrganization) // true
+console.log(authConfig.requiredEnvVars) // ["OPENAI_API_KEY"]
+
+// Get provider base URLs
+const baseUrl = PROVIDER_BASE_URLS.deepseek // "https://api.deepseek.com"
+```
+
 ## Zod Usage Policy
 
 **Important:** Zod is used ONLY for tool validation, not general schema conversion.

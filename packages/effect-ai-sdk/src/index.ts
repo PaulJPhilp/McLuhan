@@ -99,6 +99,42 @@ export type {
   ProviderEffectiveResponse,
 } from "./types/core.js";
 
+// Re-export provider and model types
+export type {
+  AnthropicModel,
+  DeepSeekModel,
+  GoogleEmbeddingModel,
+  GoogleModel,
+  GroqModel,
+  OpenAIAudioModel,
+  OpenAIEmbeddingModel,
+  OpenAIImageModel,
+  OpenAIModel,
+  PerplexityModel,
+  ProviderAuthConfig,
+  ProviderCapabilities,
+  ProviderModelMap,
+  QwenModel,
+  SupportedAudioModel,
+  SupportedEmbeddingModel,
+  SupportedImageModel,
+  SupportedLanguageModel,
+  SupportedModel,
+  SupportedProvider,
+  XaiModel,
+  GatewayModel,
+} from "./types/models.js";
+
+export {
+  PROVIDER_ALIASES,
+  PROVIDER_AUTH_CONFIG,
+  PROVIDER_BASE_URLS,
+  PROVIDER_CAPABILITIES,
+  PROVIDER_COMPARISON,
+  PROVIDER_MODELS,
+  isSupportedModel,
+} from "./types/models.js";
+
 // Re-export tools
 export { defineTool, runTools } from "./tools/index.js";
 export type { Tool, ToolDefinition } from "./tools/types.js";
