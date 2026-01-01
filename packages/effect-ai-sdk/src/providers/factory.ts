@@ -216,10 +216,7 @@ export function getEmbeddingModel(
         return provider.embedding(modelId);
       }
 
-      if (
-        provider.embedding &&
-        typeof provider.embedding === "function"
-      ) {
+      if (provider.embedding && typeof provider.embedding === "function") {
         return provider.embedding(modelId);
       }
 
