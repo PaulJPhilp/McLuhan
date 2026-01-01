@@ -42,7 +42,7 @@
     "@ai-sdk/perplexity": "^1.1.9",
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/xai": "^1.2.18",
-    "ai": "^5.0.109",
+    "ai": "^5.0.117",
     "zod": "^3.23.8"
   },
   "devDependencies": {
