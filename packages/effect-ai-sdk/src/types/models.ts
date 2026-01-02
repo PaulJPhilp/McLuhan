@@ -55,7 +55,10 @@ export type OpenAIModel =
  * OpenAI embedding models
  * Visit: https://platform.openai.com/docs/guides/embeddings
  */
-export type OpenAIEmbeddingModel = "text-embedding-3-large" | "text-embedding-3-small" | "text-embedding-ada-002";
+export type OpenAIEmbeddingModel =
+  | "text-embedding-3-large"
+  | "text-embedding-3-small"
+  | "text-embedding-ada-002";
 
 /**
  * OpenAI image generation models
@@ -124,7 +127,10 @@ export type GoogleEmbeddingModel = "text-embedding-004" | "embedding-001";
  * - llama2-70b-4096: Meta's Llama 2 70B parameter model
  * - gemma-7b-it: Google's lightweight instruction-tuned model
  */
-export type GroqModel = "mixtral-8x7b-32768" | "llama2-70b-4096" | "gemma-7b-it";
+export type GroqModel =
+  | "mixtral-8x7b-32768"
+  | "llama2-70b-4096"
+  | "gemma-7b-it";
 
 /**
  * DeepSeek language models (OpenAI-compatible)
@@ -203,7 +209,9 @@ export type SupportedLanguageModel =
 /**
  * Union type of all supported embedding models
  */
-export type SupportedEmbeddingModel = OpenAIEmbeddingModel | GoogleEmbeddingModel;
+export type SupportedEmbeddingModel =
+  | OpenAIEmbeddingModel
+  | GoogleEmbeddingModel;
 
 /**
  * Union type of all supported image generation models
@@ -268,7 +276,10 @@ export interface ProviderCapabilities {
 /**
  * Comprehensive provider capabilities matrix
  */
-export const PROVIDER_CAPABILITIES: Record<SupportedProvider, ProviderCapabilities> = {
+export const PROVIDER_CAPABILITIES: Record<
+  SupportedProvider,
+  ProviderCapabilities
+> = {
   openai: {
     languageModel: true,
     embedding: true,
@@ -398,7 +409,9 @@ export interface ProviderModelMap {
 /**
  * Mapping of all supported models by provider
  */
-export const PROVIDER_MODELS: Readonly<Record<SupportedProvider, readonly string[]>> = {
+export const PROVIDER_MODELS: Readonly<
+  Record<SupportedProvider, readonly string[]>
+> = {
   openai: ["gpt-5o", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
   anthropic: [
     "claude-3-5-sonnet-20241022",
@@ -406,10 +419,20 @@ export const PROVIDER_MODELS: Readonly<Record<SupportedProvider, readonly string
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307",
   ],
-  google: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
+  google: [
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-1.0-pro",
+  ],
   groq: ["mixtral-8x7b-32768", "llama2-70b-4096", "gemma-7b-it"],
   deepseek: ["deepseek-coder", "deepseek-chat"],
-  perplexity: ["pplx-70b-online", "pplx-7b-online", "pplx-70b-chat", "pplx-7b-chat"],
+  perplexity: [
+    "pplx-70b-online",
+    "pplx-7b-online",
+    "pplx-70b-chat",
+    "pplx-7b-chat",
+  ],
   xai: ["grok-2", "grok-1"],
   qwen: ["qwen-turbo", "qwen-plus", "qwen-max"],
   gateway: [], // Gateway supports dynamic models
@@ -429,7 +452,10 @@ export const PROVIDER_MODELS: Readonly<Record<SupportedProvider, readonly string
  * const isUnsupported = isSupportedModel("openai", "claude-opus") // false
  * ```
  */
-export function isSupportedModel(provider: SupportedProvider, model: string): boolean {
+export function isSupportedModel(
+  provider: SupportedProvider,
+  model: string
+): boolean {
   const models = PROVIDER_MODELS[provider];
   // Gateway supports any model dynamically
   if (provider === "gateway") return true;
@@ -459,7 +485,9 @@ export const PROVIDER_ALIASES: Readonly<Record<string, SupportedProvider>> = {
  * Provider API base URLs
  * Default base URLs for each provider when not explicitly configured
  */
-export const PROVIDER_BASE_URLS: Readonly<Record<SupportedProvider, string | null>> = {
+export const PROVIDER_BASE_URLS: Readonly<
+  Record<SupportedProvider, string | null>
+> = {
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com",
   google: null, // Google uses different authentication
@@ -493,81 +521,82 @@ export interface ProviderAuthConfig {
 /**
  * Provider authentication configuration details
  */
-export const PROVIDER_AUTH_CONFIG: Readonly<Record<SupportedProvider, ProviderAuthConfig>> =
-  {
-    openai: {
-      apiKeyEnvVar: "OPENAI_API_KEY",
-      supportsOrganization: true,
-      supportsProject: true,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["OPENAI_API_KEY"],
-      optionalEnvVars: ["OPENAI_ORG_ID", "OPENAI_PROJECT_ID"],
-    },
-    anthropic: {
-      apiKeyEnvVar: "ANTHROPIC_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["ANTHROPIC_API_KEY"],
-      optionalEnvVars: [],
-    },
-    google: {
-      apiKeyEnvVar: "GOOGLE_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: false,
-      requiredEnvVars: ["GOOGLE_API_KEY"],
-      optionalEnvVars: [],
-    },
-    groq: {
-      apiKeyEnvVar: "GROQ_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["GROQ_API_KEY"],
-      optionalEnvVars: [],
-    },
-    deepseek: {
-      apiKeyEnvVar: "DEEPSEEK_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["DEEPSEEK_API_KEY"],
-      optionalEnvVars: [],
-    },
-    perplexity: {
-      apiKeyEnvVar: "PERPLEXITY_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["PERPLEXITY_API_KEY"],
-      optionalEnvVars: [],
-    },
-    xai: {
-      apiKeyEnvVar: "XAI_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["XAI_API_KEY"],
-      optionalEnvVars: [],
-    },
-    qwen: {
-      apiKeyEnvVar: "QWEN_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["QWEN_API_KEY"],
-      optionalEnvVars: [],
-    },
-    gateway: {
-      apiKeyEnvVar: "VERCEL_AI_GATEWAY_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["VERCEL_AI_GATEWAY_API_KEY"],
-      optionalEnvVars: [],
-    },
-  } as const;
+export const PROVIDER_AUTH_CONFIG: Readonly<
+  Record<SupportedProvider, ProviderAuthConfig>
+> = {
+  openai: {
+    apiKeyEnvVar: "OPENAI_API_KEY",
+    supportsOrganization: true,
+    supportsProject: true,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["OPENAI_API_KEY"],
+    optionalEnvVars: ["OPENAI_ORG_ID", "OPENAI_PROJECT_ID"],
+  },
+  anthropic: {
+    apiKeyEnvVar: "ANTHROPIC_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["ANTHROPIC_API_KEY"],
+    optionalEnvVars: [],
+  },
+  google: {
+    apiKeyEnvVar: "GOOGLE_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: false,
+    requiredEnvVars: ["GOOGLE_API_KEY"],
+    optionalEnvVars: [],
+  },
+  groq: {
+    apiKeyEnvVar: "GROQ_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["GROQ_API_KEY"],
+    optionalEnvVars: [],
+  },
+  deepseek: {
+    apiKeyEnvVar: "DEEPSEEK_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["DEEPSEEK_API_KEY"],
+    optionalEnvVars: [],
+  },
+  perplexity: {
+    apiKeyEnvVar: "PERPLEXITY_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["PERPLEXITY_API_KEY"],
+    optionalEnvVars: [],
+  },
+  xai: {
+    apiKeyEnvVar: "XAI_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["XAI_API_KEY"],
+    optionalEnvVars: [],
+  },
+  qwen: {
+    apiKeyEnvVar: "QWEN_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["QWEN_API_KEY"],
+    optionalEnvVars: [],
+  },
+  gateway: {
+    apiKeyEnvVar: "VERCEL_AI_GATEWAY_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["VERCEL_AI_GATEWAY_API_KEY"],
+    optionalEnvVars: [],
+  },
+} as const;
 
 /**
  * Provider feature comparison
@@ -585,7 +614,15 @@ export const PROVIDER_COMPARISON = {
   /** Providers with vision capabilities */
   withVision: ["openai", "anthropic", "google"] as const,
   /** Providers with tool calling support */
-  withToolCalling: ["openai", "anthropic", "google", "groq", "deepseek", "xai", "qwen"] as const,
+  withToolCalling: [
+    "openai",
+    "anthropic",
+    "google",
+    "groq",
+    "deepseek",
+    "xai",
+    "qwen",
+  ] as const,
   /** Providers with streaming support */
   withStreaming: [
     "openai",

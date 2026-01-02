@@ -23,5 +23,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.7",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.2"
   }
 }

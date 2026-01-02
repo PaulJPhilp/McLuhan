@@ -3,7 +3,7 @@
  * @module @org_name/effect-ai-model-sdk/types/messages
  */
 
-import type { CoreMessage } from "ai";
+import type { ModelMessage } from "ai";
 import { Chunk } from "effect";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
@@ -110,7 +110,7 @@ export type EffectiveMessage = Message;
  */
 export function toVercelMessage(
   message: Message
-): Effect.Effect<CoreMessage, AiSdkMessageTransformError> {
+): Effect.Effect<ModelMessage, AiSdkMessageTransformError> {
   return Effect.gen(function* () {
     const parts = Chunk.toReadonlyArray(message.parts);
     const role = message.role;
@@ -226,7 +226,7 @@ export function toVercelMessage(
  * Convert Vercel CoreMessage to EffectiveMessage
  */
 export function toEffectiveMessage(
-  coreMessage: CoreMessage,
+  coreMessage: ModelMessage,
   _modelId: string
 ): Effect.Effect<Message, AiSdkMessageTransformError> {
   return Effect.gen(function* () {
@@ -361,10 +361,10 @@ export function toEffectiveMessage(
  */
 export function toVercelMessages(
   messages: Chunk.Chunk<Message>
-): Effect.Effect<CoreMessage[], AiSdkMessageTransformError> {
+): Effect.Effect<ModelMessage[], AiSdkMessageTransformError> {
   return Effect.gen(function* () {
     const messageArray = Chunk.toReadonlyArray(messages);
-    const coreMessages: CoreMessage[] = [];
+    const coreMessages: ModelMessage[] = [];
 
     for (const message of messageArray) {
       const coreMessage = yield* toVercelMessage(message);
@@ -379,7 +379,7 @@ export function toVercelMessages(
  * Convert multiple Vercel CoreMessages to EffectiveMessages
  */
 export function toEffectiveMessages(
-  coreMessages: CoreMessage[],
+  coreMessages: ModelMessage[],
   modelId: string
 ): Effect.Effect<Chunk.Chunk<Message>, AiSdkMessageTransformError> {
   return Effect.gen(function* () {
