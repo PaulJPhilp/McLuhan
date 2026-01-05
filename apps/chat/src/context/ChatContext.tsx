@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect'
-import { createContext, FC, ReactNode, useCallback, useContext, useEffect, useState } from 'react'
+import { FC, ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Message, ThreadMessage, ThreadState } from '../actors/ThreadActor'
 import { ChatRuntime } from '../services/ChatRuntime'
 import { HumeService } from '../services/HumeService'
@@ -50,115 +50,245 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
         lastUpdated: Date.now(),
     })
 
-    // Initialize services on mount
-    useEffect(() => {
-        const initializeServices = async () => {
-            const program = Effect.gen(function* () {
-                const threadService = yield* ThreadService
-                const currentState = yield* threadService.getState()
-                setState(currentState)
-            })
+    // Create service layer once
+    const serviceLayerRef = useRef<Layer.Layer<ThreadService | ChatRuntime | HumeService, never, never> | null>(null)
+    
+    if (!serviceLayerRef.current) {
+        // ChatRuntime.Default() returns a Layer (no config needed, uses env vars)
+        // Note: The service will fail when accessed if no API key is configured
+        const chatRuntimeLayer = ChatRuntime.Default()
+        const mergedLayer = Layer.mergeAll(
+            ThreadService.Default,
+            chatRuntimeLayer,
+            HumeService.Default,
+        )
+        serviceLayerRef.current = mergedLayer as Layer.Layer<ThreadService | ChatRuntime | HumeService, never, never>
+    }
 
-            const layer = Layer.merge(ThreadService.Default, HumeService.Default)
+    // Sync state from ThreadService
+    const syncState = useCallback(async () => {
+        const program = Effect.gen(function* () {
+            const threadService = yield* ThreadService
+            return yield* threadService.getState()
+        })
 
-            await Effect.runPromise(Effect.provide(program, layer)).catch((err) => {
-                console.error('Failed to initialize services:', err)
-            })
+        try {
+            const currentState = await Effect.runPromise(
+                Effect.provide(program, serviceLayerRef.current!),
+            )
+            setState(currentState)
+        } catch (err) {
+            console.error('Failed to sync state:', err)
         }
-
-        initializeServices()
     }, [])
 
-    const addMessage = useCallback(
-        async (role: 'user' | 'assistant' | 'system', content: string) => {
-            const message: ThreadMessage = {
-                type: 'ADD_MESSAGE',
-                payload: { role, content },
-            }
+    // Initialize services on mount
+    useEffect(() => {
+        syncState()
+    }, [syncState])
 
-            setState((prev) => ({
-                ...prev,
-                messages: [
-                    ...prev.messages,
-                    {
-                        id: crypto.randomUUID(),
-                        role,
-                        content,
-                        timestamp: Date.now(),
-                    },
-                ],
-                lastUpdated: Date.now(),
-            }))
+    // Helper to send a message to ThreadService
+    const sendToThreadService = useCallback(
+        async (message: ThreadMessage) => {
+            const program = Effect.gen(function* () {
+                const threadService = yield* ThreadService
+                yield* threadService.send(message)
+                return yield* threadService.getState()
+            })
+
+            try {
+                const newState = await Effect.runPromise(
+                    Effect.provide(program, serviceLayerRef.current!),
+                )
+                setState(newState)
+            } catch (err) {
+                console.error('Failed to send message to ThreadService:', err)
+                throw err
+            }
         },
         [],
     )
 
+    const addMessage = useCallback(
+        async (role: 'user' | 'assistant' | 'system', content: string) => {
+            await sendToThreadService({
+                type: 'ADD_MESSAGE',
+                payload: { role, content },
+            })
+        },
+        [sendToThreadService],
+    )
+
     const clearMessages = useCallback(async () => {
-        setState((prev) => ({
-            ...prev,
-            messages: [],
-            error: undefined,
-            lastUpdated: Date.now(),
-        }))
-    }, [])
+        await sendToThreadService({ type: 'CLEAR_MESSAGES' })
+    }, [sendToThreadService])
 
     const retryLastMessage = useCallback(async () => {
-        setState((prev) => {
-            const lastUserMessageIndex = [...prev.messages]
-                .reverse()
-                .findIndex((m) => m.role === 'user')
-
-            if (lastUserMessageIndex === -1) return prev
-
-            const realIndex = prev.messages.length - 1 - lastUserMessageIndex
-
-            return {
-                ...prev,
-                messages: prev.messages.slice(0, realIndex + 1),
-                error: undefined,
-                lastUpdated: Date.now(),
-            }
-        })
-    }, [])
+        await sendToThreadService({ type: 'RETRY_LAST_MESSAGE' })
+    }, [sendToThreadService])
 
     const sendMessage = useCallback(
         async (content: string) => {
             if (!content.trim()) return
 
-            // Add user message
-            await addMessage('user', content)
-            setState((prev) => ({ ...prev, isLoading: true, error: undefined }))
-
             try {
-                // Stream response from AI
-                let assistantMessage = ''
+                // Set loading state
+                await sendToThreadService({ type: 'SET_LOADING', payload: true })
+                await sendToThreadService({ type: 'SET_ERROR', payload: null })
 
-                const program = Effect.gen(function* () {
+                // Add user message and get the updated state in one operation
+                // This ensures we're working with the same service instance
+                const addMessageAndGetState = Effect.gen(function* () {
+                    const threadService = yield* ThreadService
                     const runtime = yield* ChatRuntime
-                    return runtime.streamResponse(state.messages as Message[])
+                    
+                    // Add the user message
+                    yield* threadService.send({
+                        type: 'ADD_MESSAGE',
+                        payload: { role: 'user', content },
+                    })
+                    
+                    // Get the updated state immediately
+                    const currentState = yield* threadService.getState()
+                    
+                    return {
+                        messages: currentState.messages,
+                        streamResponse: runtime.streamResponse,
+                    }
                 })
 
-                const layer = ChatRuntime.Default
-                const streamIterable = await Effect.runPromise(Effect.provide(program, layer))
+                const { messages: currentMessages, streamResponse } = await Effect.runPromise(
+                    addMessageAndGetState.pipe(Effect.provide(serviceLayerRef.current!)),
+                ).catch((err) => {
+                    // If ChatRuntime fails to initialize (no API key), provide a clearer error
+                    if (err instanceof Error && err.message.includes('API key')) {
+                        throw new Error(
+                            'No API key configured. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file and restart the dev server.',
+                        )
+                    }
+                    throw err
+                })
 
-                for await (const chunk of streamIterable) {
-                    assistantMessage += chunk
+                // Update React state to reflect the user message
+                setState((prev) => ({
+                    ...prev,
+                    messages: currentMessages,
+                    lastUpdated: Date.now(),
+                }))
+
+                // Validate that we have messages before streaming
+                if (!currentMessages || currentMessages.length === 0) {
+                    console.error('No messages found after adding user message. Messages:', currentMessages)
+                    throw new Error('No messages available to send. The user message may not have been saved properly.')
                 }
 
-                // Add assistant response
-                await addMessage('assistant', assistantMessage || 'No response generated')
+                // Create initial assistant message with empty content
+                let assistantMessageId: string | null = null
+                let accumulatedContent = ''
+
+                // Start streaming
+                console.log('Starting stream with messages:', currentMessages)
+                const streamIterable = streamResponse(currentMessages)
+
+                // Process stream chunks incrementally
+                let chunkCount = 0
+                try {
+                    for await (const chunk of streamIterable) {
+                        chunkCount++
+                        accumulatedContent += chunk
+                        console.log(`Received chunk ${chunkCount}:`, chunk.substring(0, 50))
+
+                        // For streaming updates, we update React state directly for performance
+                        // This is a compromise since ThreadActor doesn't have UPDATE_MESSAGE action
+                        // We'll sync back to ThreadService at the end
+                        setState((prev) => {
+                            const lastMessage = prev.messages[prev.messages.length - 1]
+                            
+                            // If last message is assistant, update it; otherwise add new one
+                            if (lastMessage?.role === 'assistant' && assistantMessageId === lastMessage.id) {
+                                return {
+                                    ...prev,
+                                    messages: [
+                                        ...prev.messages.slice(0, -1),
+                                        {
+                                            ...lastMessage,
+                                            content: accumulatedContent,
+                                        },
+                                    ],
+                                    lastUpdated: Date.now(),
+                                }
+                            } else {
+                                // Create new assistant message
+                                const newMessage: Message = {
+                                    id: assistantMessageId || crypto.randomUUID(),
+                                    role: 'assistant',
+                                    content: accumulatedContent,
+                                    timestamp: Date.now(),
+                                }
+                                assistantMessageId = newMessage.id
+                                return {
+                                    ...prev,
+                                    messages: [...prev.messages, newMessage],
+                                    lastUpdated: Date.now(),
+                                }
+                            }
+                        })
+                    }
+                    console.log(`Stream completed. Total chunks: ${chunkCount}, Content length: ${accumulatedContent.length}`)
+                } catch (streamError) {
+                    console.error('Error during streaming:', streamError)
+                    throw streamError
+                }
+
+                // After streaming completes, ensure the final message is in ThreadService
+                // Remove any partial assistant message and add the final one
+                const finalState = await Effect.runPromise(
+                    Effect.gen(function* () {
+                        const threadService = yield* ThreadService
+                        return yield* threadService.getState()
+                    }).pipe(Effect.provide(serviceLayerRef.current!)),
+                )
+
+                // If the last message in ThreadService is different from our streamed content, update it
+                const lastThreadMessage = finalState.messages[finalState.messages.length - 1]
+                if (
+                    lastThreadMessage?.role === 'assistant' &&
+                    lastThreadMessage.content !== accumulatedContent
+                ) {
+                    // Remove last message and add updated one
+                    await sendToThreadService({ type: 'RETRY_LAST_MESSAGE' })
+                    await addMessage('assistant', accumulatedContent)
+                } else if (lastThreadMessage?.role !== 'assistant') {
+                    // No assistant message in ThreadService, add it
+                    await addMessage('assistant', accumulatedContent)
+                }
+
+                // Final sync with ThreadService to ensure consistency
+                await syncState()
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+                console.error('Error in sendMessage:', err)
+                console.error('Error stack:', err instanceof Error ? err.stack : 'No stack trace')
+                
+                // Ensure error is set in state
+                await sendToThreadService({ type: 'SET_ERROR', payload: errorMessage })
+                
+                // Also update React state directly to ensure error is visible
                 setState((prev) => ({
                     ...prev,
                     error: errorMessage,
                     isLoading: false,
                 }))
             } finally {
-                setState((prev) => ({ ...prev, isLoading: false }))
+                // Always clear loading state
+                await sendToThreadService({ type: 'SET_LOADING', payload: false })
+                setState((prev) => ({
+                    ...prev,
+                    isLoading: false,
+                }))
             }
         },
-        [addMessage, state.messages],
+        [addMessage, sendToThreadService, syncState],
     )
 
     const value: ChatContextValue = {

@@ -3,21 +3,26 @@
  * @module @org_name/effect-ai-model-sdk/core/operations
  */
 
-import type { EmbeddingModel, ImageModel, LanguageModel } from "ai";
+import type {
+  EmbeddingModel,
+  ImageModel,
+  LanguageModel,
+  ModelMessage,
+} from "ai";
 import {
+  Output,
   embedMany,
-  experimental_generateImage,
   experimental_generateSpeech,
   experimental_transcribe,
-  generateObject as vercelGenerateObject,
+  generateImage,
   generateText as vercelGenerateText,
 } from "ai";
 import * as Effect from "effect/Effect";
 import {
-  type AiSdkMessageTransformError,
   AiSdkOperationError,
+  type AiSdkMessageTransformError,
 } from "../errors.js";
-import type { EffectiveResponse } from "../types/core.js";
+import type { EffectiveResponse, FinishReason } from "../types/core.js";
 import type {
   EffectiveInput,
   GenerateObjectOptions,
@@ -34,6 +39,61 @@ import type {
 } from "../types/results.js";
 
 /**
+ * Helper to safely extract model identifier from LanguageModel
+ */
+function getModelId(model: LanguageModel): string {
+  if (typeof model === "object" && model !== null) {
+    if ("modelId" in model && typeof model.modelId === "string") {
+      return model.modelId;
+    }
+    if ("model" in model && typeof model.model === "string") {
+      return model.model;
+    }
+  }
+  return "unknown";
+}
+
+/**
+ * Type for Vercel AI SDK generateText result
+ */
+interface VercelGenerateTextResult {
+  readonly response: {
+    readonly id: string;
+    readonly modelId: string;
+    readonly timestamp: Date;
+  };
+  readonly text: string;
+  readonly finishReason: string;
+  readonly usage: {
+    readonly promptTokens: number;
+    readonly completionTokens: number;
+    readonly totalTokens: number;
+  };
+  readonly warnings?: ReadonlyArray<{
+    readonly type?: string;
+    readonly setting?: string;
+  }>;
+}
+
+/**
+ * Type for Vercel AI SDK generateText result with Output.object
+ */
+interface VercelGenerateObjectResult<T> {
+  readonly response: {
+    readonly id: string;
+    readonly modelId: string;
+    readonly timestamp: Date;
+  };
+  readonly output: T;
+  readonly finishReason: string;
+  readonly usage: {
+    readonly promptTokens: number;
+    readonly completionTokens: number;
+    readonly totalTokens: number;
+  };
+}
+
+/**
  * Generate text using a language model
  */
 export function generateText(
@@ -46,14 +106,14 @@ export function generateText(
 > {
   return Effect.gen(function* () {
     yield* Effect.log("Starting text generation", {
-      model: (model as any).modelId || "unknown",
+      model: getModelId(model),
       hasMessages: !!input.messages,
       hasText: !!input.text,
     });
 
     try {
       // Convert messages if provided
-      let messages: any[] = [];
+      let messages: ModelMessage[] = [];
       if (input.messages) {
         messages = yield* toVercelMessages(input.messages);
       } else if (input.text) {
@@ -61,48 +121,62 @@ export function generateText(
       }
 
       // Call Vercel AI SDK
-      const result = yield* Effect.tryPromise(
-        async () =>
-          await vercelGenerateText({
-            model,
-            messages,
-            system: options?.system,
-            temperature: options?.parameters?.temperature,
-            // @ts-ignore - maxTokens is valid in v5 but types might be mismatching
-            maxTokens: options?.parameters?.maxTokens,
-            topP: options?.parameters?.topP,
-            frequencyPenalty: options?.parameters?.frequencyPenalty,
-            presencePenalty: options?.parameters?.presencePenalty,
-            seed: options?.parameters?.seed,
-          })
-      ).pipe(
-        Effect.mapError(
-          (error) =>
-            new AiSdkOperationError({
-              message: "Failed to generate text",
-              operation: "generateText",
-              cause: error,
+      const result: Awaited<ReturnType<typeof vercelGenerateText>> =
+        yield* Effect.tryPromise(
+          async () =>
+            await vercelGenerateText({
+              model,
+              messages,
+              system: options?.system,
+              temperature: options?.parameters?.temperature,
+              // @ts-ignore - maxTokens is valid in v5 but types might be mismatching
+              maxTokens: options?.parameters?.maxTokens,
+              topP: options?.parameters?.topP,
+              frequencyPenalty: options?.parameters?.frequencyPenalty,
+              presencePenalty: options?.parameters?.presencePenalty,
+              seed: options?.parameters?.seed,
             })
-        )
-      );
+        ).pipe(
+          Effect.mapError(
+            (error) =>
+              new AiSdkOperationError({
+                message: "Failed to generate text",
+                operation: "generateText",
+                cause: error,
+              })
+          )
+        );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
+      // Transform result - access properties directly from Vercel result
       const textResult: GenerateTextResult = {
-        id: resultTyped.response.id,
-        model: resultTyped.response.modelId,
-        timestamp: resultTyped.response.timestamp,
-        text: resultTyped.text,
-        finishReason: resultTyped.finishReason as any,
+        id: result.response.id,
+        model: result.response.modelId,
+        timestamp: result.response.timestamp,
+        text: result.text,
+        finishReason: result.finishReason as FinishReason,
         usage: {
-          promptTokens: resultTyped.usage.promptTokens,
-          completionTokens: resultTyped.usage.completionTokens,
-          totalTokens: resultTyped.usage.totalTokens,
+          promptTokens:
+            "promptTokens" in result.usage
+              ? (result.usage.promptTokens as number)
+              : 0,
+          completionTokens:
+            "completionTokens" in result.usage
+              ? (result.usage.completionTokens as number)
+              : 0,
+          totalTokens:
+            "totalTokens" in result.usage
+              ? (result.usage.totalTokens as number)
+              : 0,
         },
-        warnings: resultTyped.warnings?.map((w: any) => ({
-          code: w.type || "warning",
-          message: "type" in w ? `${w.type}: ${w.setting || ""}` : "warning",
-        })),
+        warnings: result.warnings?.map((w) => {
+          const warning = w as { type?: string; setting?: string };
+          return {
+            code: warning.type || "warning",
+            message: warning.type
+              ? `${warning.type}: ${warning.setting || ""}`
+              : "warning",
+          };
+        }),
       };
 
       yield* Effect.log("Text generation completed successfully", {
@@ -147,7 +221,7 @@ export function generateObject<T>(
   return Effect.gen(function* () {
     try {
       // Convert messages if provided
-      let messages: any[] = [];
+      let messages: ModelMessage[] = [];
       if (input.messages) {
         messages = yield* toVercelMessages(input.messages);
       } else if (input.text) {
@@ -155,41 +229,59 @@ export function generateObject<T>(
       }
 
       // Call Vercel AI SDK
-      const result = yield* Effect.tryPromise(
-        async () =>
-          await vercelGenerateObject({
-            model,
-            messages,
-            schema,
-            system: options?.system,
-            temperature: options?.parameters?.temperature,
-            // @ts-ignore - maxTokens is valid in v5 but types might be mismatching
-            maxTokens: options?.parameters?.maxTokens,
-            topP: options?.parameters?.topP,
-          })
-      ).pipe(
-        Effect.mapError(
-          (error) =>
-            new AiSdkOperationError({
-              message: "Failed to generate object",
-              operation: "generateObject",
-              cause: error,
+      // generateObject is deprecated in v6, using generateText with Output.object instead
+      const result: Awaited<ReturnType<typeof vercelGenerateText>> =
+        yield* Effect.tryPromise(
+          async () =>
+            await vercelGenerateText({
+              model,
+              messages,
+              output: Output.object({
+                schema: schema,
+              }),
+              system: options?.system,
+              temperature: options?.parameters?.temperature,
+              // @ts-ignore - maxTokens is valid in v5 but types might be mismatching
+              maxTokens: options?.parameters?.maxTokens,
+              topP: options?.parameters?.topP,
             })
-        )
-      );
+        ).pipe(
+          Effect.mapError(
+            (error) =>
+              new AiSdkOperationError({
+                message: "Failed to generate object",
+                operation: "generateObject",
+                cause: error,
+              })
+          )
+        );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
-      const objectResult: GenerateObjectResult<T> = {
-        id: resultTyped.response.id,
-        model: resultTyped.response.modelId,
-        timestamp: resultTyped.response.timestamp,
-        object: resultTyped.object as T,
-        finishReason: resultTyped.finishReason as any,
+      // Transform result - access properties directly from Vercel result
+      // Type guard to check if result has output property (from Output.object)
+      const hasOutput = "output" in result;
+      if (!hasOutput) {
+        throw new Error("Expected result with output property");
+      }
+      const resultWithOutput = result as {
+        response: { id: string; modelId: string; timestamp: Date };
+        output: T;
+        finishReason: string;
         usage: {
-          promptTokens: resultTyped.usage.promptTokens,
-          completionTokens: resultTyped.usage.completionTokens,
-          totalTokens: resultTyped.usage.totalTokens,
+          promptTokens?: number;
+          completionTokens?: number;
+          totalTokens?: number;
+        };
+      };
+      const objectResult: GenerateObjectResult<T> = {
+        id: resultWithOutput.response.id,
+        model: resultWithOutput.response.modelId,
+        timestamp: resultWithOutput.response.timestamp,
+        object: resultWithOutput.output,
+        finishReason: resultWithOutput.finishReason as FinishReason,
+        usage: {
+          promptTokens: resultWithOutput.usage.promptTokens ?? 0,
+          completionTokens: resultWithOutput.usage.completionTokens ?? 0,
+          totalTokens: resultWithOutput.usage.totalTokens ?? 0,
         },
       };
 
@@ -243,20 +335,25 @@ export function generateEmbeddings(
         )
       );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
+      // Transform result - access properties directly
       const embeddingsResult: GenerateEmbeddingsResult = {
         id: `embedding-${Date.now()}`,
         model: "unknown",
         timestamp: new Date(),
-        embeddings: resultTyped.embeddings,
-        dimensions: resultTyped.embeddings[0]?.length || 0,
+        embeddings: result.embeddings,
+        dimensions: result.embeddings[0]?.length || 0,
         texts,
         finishReason: "stop",
         usage: {
-          promptTokens: resultTyped.usage?.tokens || 0,
+          promptTokens:
+            "usage" in result && result.usage && "tokens" in result.usage
+              ? (result.usage.tokens as number)
+              : 0,
           completionTokens: 0,
-          totalTokens: resultTyped.usage?.tokens || 0,
+          totalTokens:
+            "usage" in result && result.usage && "tokens" in result.usage
+              ? (result.usage.tokens as number)
+              : 0,
         },
         parameters: {},
       };
@@ -297,12 +394,20 @@ export function generateImages(
     try {
       const result = yield* Effect.tryPromise(
         async () =>
-          await experimental_generateImage({
+          await generateImage({
             model,
             prompt,
             n: options?.n ?? 1,
-            size: options?.size as any,
-            aspectRatio: options?.aspectRatio as any,
+            size: options?.size as
+              | "1024x1024"
+              | "1792x1024"
+              | "1024x1792"
+              | undefined,
+            aspectRatio: options?.aspectRatio as
+              | "1:1"
+              | "16:9"
+              | "9:16"
+              | undefined,
           })
       ).pipe(
         Effect.mapError(
@@ -315,16 +420,21 @@ export function generateImages(
         )
       );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
+      // Transform result - access properties directly
       const imageResult: GenerateImageResult = {
         id: `image-${Date.now()}`,
         model: "unknown",
         timestamp: new Date(),
-        imageUrl: resultTyped.images[0]?.url || "",
-        additionalImages: resultTyped.images
-          .slice(1)
-          .map((img: any) => img.url || ""),
+        imageUrl:
+          result.images[0] && "url" in result.images[0]
+            ? (result.images[0].url as string)
+            : result.images[0] && "data" in result.images[0]
+            ? (result.images[0].data as string)
+            : "",
+        additionalImages: result.images.slice(1).map((img) => {
+          const image = img as { url?: string; data?: string };
+          return image.url || image.data || "";
+        }),
         parameters: {
           size: options?.size,
         },
@@ -389,13 +499,19 @@ export function generateAudio(
         )
       );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
+      // Transform result - access properties directly
       const speechResult: GenerateSpeechResult = {
         id: `speech-${Date.now()}`,
         model: "unknown",
         timestamp: new Date(),
-        audioData: resultTyped.audio || "",
+        audioData:
+          "audio" in result && result.audio
+            ? typeof result.audio === "string"
+              ? result.audio
+              : "data" in result.audio
+              ? (result.audio.data as string)
+              : ""
+            : "",
         format: "mp3", // Default format
         parameters: {
           voice: options?.voice,
@@ -461,21 +577,35 @@ export function transcribeAudio(
         )
       );
 
-      // Transform result
-      const resultTyped = result as any; // Type assertion for v5 API
+      // Transform result - access properties directly
       const transcriptionResult: TranscribeResult = {
         id: `transcription-${Date.now()}`,
         model: "unknown",
         timestamp: new Date(),
-        text: resultTyped.text,
-        segments: resultTyped.segments?.map((seg: any) => ({
-          id: seg.id,
-          start: seg.start,
-          end: seg.end,
-          text: seg.text,
-          confidence: seg.confidence,
-        })),
-        detectedLanguage: resultTyped.language,
+        text: result.text,
+        segments: result.segments?.map((seg) => {
+          const segment = seg as {
+            id?: number | string;
+            start?: number;
+            end?: number;
+            text?: string;
+            confidence?: number;
+          };
+          return {
+            id:
+              typeof segment.id === "number"
+                ? segment.id
+                : typeof segment.id === "string"
+                ? parseInt(segment.id, 10) || 0
+                : 0,
+            start: segment.start ?? 0,
+            end: segment.end ?? 0,
+            text: segment.text || "",
+            confidence: segment.confidence ?? 0,
+          };
+        }),
+        detectedLanguage:
+          "language" in result ? (result.language as string) : undefined,
         parameters: {
           language: options?.language,
         },

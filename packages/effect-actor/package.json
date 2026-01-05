@@ -50,7 +50,7 @@
     "precommit": "lint-staged"
   },
   "dependencies": {
-    "effect": "^3.18.4"
+    "effect": "^3.19.14"
   },
   "devDependencies": {
     "@types/bun": "latest",

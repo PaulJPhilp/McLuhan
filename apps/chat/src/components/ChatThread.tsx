@@ -12,8 +12,8 @@ export const ChatThread: FC = () => {
     const [autoScroll, setAutoScroll] = useState(true)
 
     const scrollToBottom = () => {
-        if (autoScroll) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (autoScroll && messagesEndRef.current?.scrollIntoView) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
         }
     }
 
@@ -49,9 +49,14 @@ export const ChatThread: FC = () => {
                     )}
 
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg">
-                            <p className="font-semibold">Error</p>
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg my-4">
+                            <p className="font-semibold mb-1">⚠️ Error</p>
                             <p className="text-sm">{error}</p>
+                            {error.includes('API key') && (
+                                <p className="text-xs mt-2 text-red-600">
+                                    Tip: Create a <code className="bg-red-100 px-1 rounded">.env.local</code> file in the <code className="bg-red-100 px-1 rounded">apps/chat</code> directory with your API key.
+                                </p>
+                            )}
                         </div>
                     )}
 
