@@ -10,7 +10,7 @@ A modern, Effect-native chat interface inspired by [assistant-ui](https://www.as
 - **State Management**: Pure state machine using `effect-actor` for reliable conversation state
 - **Markdown Support**: Rich text rendering with syntax highlighting via `react-markdown`
 - **Responsive Design**: Modern Tailwind CSS styling with clean, accessible interface
-- **Comprehensive Testing**: 109 passing tests with 72%+ code coverage
+- **Comprehensive Testing**: 103 passing tests | 4 skipped (with documented reasons) - 72%+ code coverage
 - **No Mocks**: All tests use real implementations following workspace policy
 
 ## Quick Start

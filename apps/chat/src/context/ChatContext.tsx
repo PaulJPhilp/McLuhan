@@ -1,306 +1,277 @@
-import { Effect, Layer } from 'effect'
-import { FC, ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Message, ThreadMessage, ThreadState } from '../actors/ThreadActor'
-import { ChatRuntime } from '../services/ChatRuntime'
-import { HumeService } from '../services/HumeService'
-import { ThreadService } from '../services/ThreadService'
+import { Result, useAtomRefresh, useAtomValue } from "@effect-atom/atom-react";
+import { Effect } from "effect";
+import { FC, ReactNode, createContext, useCallback, useContext } from "react";
+import type {
+	Message,
+	ThreadMessage,
+	ThreadState,
+} from "../actors/ThreadActor.js";
+import { StreamingService } from "../services/StreamingService/index.js";
+import { ThreadService } from "../services/ThreadService/index.js";
+import { sharedRuntime } from "./atomRuntime.js";
+import { threadStateAtom } from "./threadAtom.js";
 
 /**
  * Chat context for providing services to components
  */
 interface ChatContextValue {
-    // Thread state
-    state: ThreadState
-    messages: readonly Message[]
-    isLoading: boolean
-    error: string | null
+	// Thread state
+	state: ThreadState;
+	messages: readonly Message[];
+	isLoading: boolean;
+	error: string | null;
 
-    // Thread actions
-    addMessage: (role: 'user' | 'assistant' | 'system', content: string) => Promise<void>
-    clearMessages: () => Promise<void>
-    retryLastMessage: () => Promise<void>
+	// Thread actions
+	addMessage: (
+		role: "user" | "assistant" | "system",
+		content: string,
+	) => Promise<void>;
+	clearMessages: () => Promise<void>;
+	retryLastMessage: () => Promise<void>;
 
-    // Chat runtime
-    sendMessage: (content: string) => Promise<void>
+	// Chat runtime
+	sendMessage: (content: string) => Promise<void>;
 }
 
-const ChatContext = createContext<ChatContextValue | undefined>(undefined)
+const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 
 export const useChatContext = (): ChatContextValue => {
-    const context = useContext(ChatContext)
-    if (!context) {
-        throw new Error('useChatContext must be used within ChatProvider')
-    }
-    return context
-}
+	const context = useContext(ChatContext);
+	if (!context) {
+		throw new Error("useChatContext must be used within ChatProvider");
+	}
+	return context;
+};
 
 interface ChatProviderProps {
-    children: ReactNode
+	children: ReactNode;
 }
 
 /**
- * Provider component that sets up Effect services and manages state
+ * Provider component that sets up Effect services and manages state using effect-atom
+ * ThreadService is the single source of truth; React state is automatically synced via atoms
  */
 export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
-    const [state, setState] = useState<ThreadState>({
-        id: crypto.randomUUID(),
-        messages: [],
-        isLoading: false,
-        error: undefined,
-        lastUpdated: Date.now(),
-    })
+	// Automatic reactive state - reads from ThreadService via atom
+	const stateResult = useAtomValue(threadStateAtom);
+	const refreshThreadState = useAtomRefresh(threadStateAtom);
 
-    // Create service layer once
-    const serviceLayerRef = useRef<Layer.Layer<ThreadService | ChatRuntime | HumeService, never, never> | null>(null)
-    
-    if (!serviceLayerRef.current) {
-        // ChatRuntime.Default() returns a Layer (no config needed, uses env vars)
-        // Note: The service will fail when accessed if no API key is configured
-        const chatRuntimeLayer = ChatRuntime.Default()
-        const mergedLayer = Layer.mergeAll(
-            ThreadService.Default,
-            chatRuntimeLayer,
-            HumeService.Default,
-        )
-        serviceLayerRef.current = mergedLayer as Layer.Layer<ThreadService | ChatRuntime | HumeService, never, never>
-    }
+	const state: ThreadState = Result.getOrElse(stateResult, () => ({
+		id: crypto.randomUUID(),
+		messages: [],
+		isLoading: false,
+		error: undefined,
+		lastUpdated: Date.now(),
+	}));
 
-    // Sync state from ThreadService
-    const syncState = useCallback(async () => {
-        const program = Effect.gen(function* () {
-            const threadService = yield* ThreadService
-            return yield* threadService.getState()
-        })
+	// Helper to send a message to ThreadService and invalidate atom to trigger refresh
+	const sendToThreadService = useCallback(
+		async (message: ThreadMessage) => {
+			const program = Effect.gen(function* () {
+				const threadService = yield* ThreadService;
+				yield* threadService.send(message);
+			});
 
-        try {
-            const currentState = await Effect.runPromise(
-                Effect.provide(program, serviceLayerRef.current!),
-            )
-            setState(currentState)
-        } catch (err) {
-            console.error('Failed to sync state:', err)
-        }
-    }, [])
+			await sharedRuntime.runPromise(program);
+			// Refresh atom to trigger re-render
+			// The refresh triggers an async re-read of the atom
+			refreshThreadState();
+			// Wait for React to process the refresh
+			// Use a small delay to ensure the atom has re-read the state
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		},
+		[refreshThreadState],
+	);
 
-    // Initialize services on mount
-    useEffect(() => {
-        syncState()
-    }, [syncState])
+	const addMessage = useCallback(
+		async (role: "user" | "assistant" | "system", content: string) => {
+			await sendToThreadService({
+				type: "ADD_MESSAGE",
+				payload: { role, content },
+			});
+		},
+		[sendToThreadService],
+	);
 
-    // Helper to send a message to ThreadService
-    const sendToThreadService = useCallback(
-        async (message: ThreadMessage) => {
-            const program = Effect.gen(function* () {
-                const threadService = yield* ThreadService
-                yield* threadService.send(message)
-                return yield* threadService.getState()
-            })
+	const clearMessages = useCallback(async () => {
+		await sendToThreadService({ type: "CLEAR_MESSAGES" });
+	}, [sendToThreadService]);
 
-            try {
-                const newState = await Effect.runPromise(
-                    Effect.provide(program, serviceLayerRef.current!),
-                )
-                setState(newState)
-            } catch (err) {
-                console.error('Failed to send message to ThreadService:', err)
-                throw err
-            }
-        },
-        [],
-    )
+	const retryLastMessage = useCallback(async () => {
+		await sendToThreadService({ type: "RETRY_LAST_MESSAGE" });
+	}, [sendToThreadService]);
 
-    const addMessage = useCallback(
-        async (role: 'user' | 'assistant' | 'system', content: string) => {
-            await sendToThreadService({
-                type: 'ADD_MESSAGE',
-                payload: { role, content },
-            })
-        },
-        [sendToThreadService],
-    )
+	const sendMessage = useCallback(
+		async (content: string) => {
+			if (!content.trim()) return;
 
-    const clearMessages = useCallback(async () => {
-        await sendToThreadService({ type: 'CLEAR_MESSAGES' })
-    }, [sendToThreadService])
+			try {
+				// Set loading state
+				await sendToThreadService({ type: "SET_LOADING", payload: true });
+				await sendToThreadService({ type: "SET_ERROR", payload: null });
 
-    const retryLastMessage = useCallback(async () => {
-        await sendToThreadService({ type: 'RETRY_LAST_MESSAGE' })
-    }, [sendToThreadService])
+				// Add user message
+				await sendToThreadService({
+					type: "ADD_MESSAGE",
+					payload: { role: "user", content },
+				});
 
-    const sendMessage = useCallback(
-        async (content: string) => {
-            if (!content.trim()) return
+				// Get current messages for streaming
+				const getMessagesProgram = Effect.gen(function* () {
+					const threadService = yield* ThreadService;
+					return yield* threadService.getMessages();
+				});
 
-            try {
-                // Set loading state
-                await sendToThreadService({ type: 'SET_LOADING', payload: true })
-                await sendToThreadService({ type: 'SET_ERROR', payload: null })
+				const currentMessages =
+					await sharedRuntime.runPromise(getMessagesProgram);
 
-                // Add user message and get the updated state in one operation
-                // This ensures we're working with the same service instance
-                const addMessageAndGetState = Effect.gen(function* () {
-                    const threadService = yield* ThreadService
-                    const runtime = yield* ChatRuntime
-                    
-                    // Add the user message
-                    yield* threadService.send({
-                        type: 'ADD_MESSAGE',
-                        payload: { role: 'user', content },
-                    })
-                    
-                    // Get the updated state immediately
-                    const currentState = yield* threadService.getState()
-                    
-                    return {
-                        messages: currentState.messages,
-                        streamResponse: runtime.streamResponse,
-                    }
-                })
+				// Validate that we have messages before streaming
+				if (!currentMessages || currentMessages.length === 0) {
+					console.error(
+						"No messages found after adding user message. Messages:",
+						currentMessages,
+					);
+					throw new Error(
+						"No messages available to send. The user message may not have been saved properly.",
+					);
+				}
 
-                const { messages: currentMessages, streamResponse } = await Effect.runPromise(
-                    addMessageAndGetState.pipe(Effect.provide(serviceLayerRef.current!)),
-                ).catch((err) => {
-                    // If ChatRuntime fails to initialize (no API key), provide a clearer error
-                    if (err instanceof Error && err.message.includes('API key')) {
-                        throw new Error(
-                            'No API key configured. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file and restart the dev server.',
-                        )
-                    }
-                    throw err
-                })
+				// Create assistant message placeholder before streaming starts
+				// This ensures we have a message to update during streaming
+				await sendToThreadService({
+					type: "ADD_MESSAGE",
+					payload: { role: "assistant", content: "" },
+				});
 
-                // Update React state to reflect the user message
-                setState((prev) => ({
-                    ...prev,
-                    messages: currentMessages,
-                    lastUpdated: Date.now(),
-                }))
+				// Use StreamingService to handle the streaming
+				const streamProgram = Effect.gen(function* () {
+					const streaming = yield* StreamingService;
 
-                // Validate that we have messages before streaming
-                if (!currentMessages || currentMessages.length === 0) {
-                    console.error('No messages found after adding user message. Messages:', currentMessages)
-                    throw new Error('No messages available to send. The user message may not have been saved properly.')
-                }
+					return yield* streaming.streamChat({
+						messages: currentMessages,
+						onChunk: (chunk, accumulated) => {
+							// Update ThreadService during streaming for incremental updates
+							// The atom will automatically refresh React components
+							const updateProgram = Effect.gen(function* () {
+								const threadService = yield* ThreadService;
+								const currentState = yield* threadService.getState();
+								const lastMessage =
+									currentState.messages[currentState.messages.length - 1];
 
-                // Create initial assistant message with empty content
-                let assistantMessageId: string | null = null
-                let accumulatedContent = ''
+								// Always update the last message if it's an assistant message
+								// Otherwise add a new one (shouldn't happen, but safety check)
+								if (lastMessage?.role === "assistant") {
+									// Remove the last assistant message and add updated one
+									yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
+									yield* threadService.send({
+										type: "ADD_MESSAGE",
+										payload: { role: "assistant", content: accumulated },
+									});
+								} else {
+									// Fallback: add new assistant message if last isn't assistant
+									yield* threadService.send({
+										type: "ADD_MESSAGE",
+										payload: { role: "assistant", content: accumulated },
+									});
+								}
+							});
 
-                // Start streaming
-                console.log('Starting stream with messages:', currentMessages)
-                const streamIterable = streamResponse(currentMessages)
+							// Update ThreadService and refresh atom to trigger re-render
+							sharedRuntime
+								.runPromise(updateProgram)
+								.then(() => {
+									refreshThreadState();
+								})
+								.catch((err) => {
+									console.error(
+										"Failed to update state during streaming:",
+										err,
+									);
+								});
+						},
+					});
+				});
 
-                // Process stream chunks incrementally
-                let chunkCount = 0
-                try {
-                    for await (const chunk of streamIterable) {
-                        chunkCount++
-                        accumulatedContent += chunk
-                        console.log(`Received chunk ${chunkCount}:`, chunk.substring(0, 50))
+				const result = await sharedRuntime.runPromise(
+					streamProgram.pipe(
+						Effect.catchAll((error) => {
+							// If ChatRuntime fails to initialize (no API key), provide a clearer error
+							const errorMessage =
+								error instanceof Error ? error.message : String(error);
+							if (errorMessage.includes("API key")) {
+								return Effect.fail(
+									new Error(
+										"No API key configured. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file and restart the dev server.",
+									),
+								);
+							}
+							return Effect.fail(
+								error instanceof Error ? error : new Error(errorMessage),
+							);
+						}),
+					),
+				);
 
-                        // For streaming updates, we update React state directly for performance
-                        // This is a compromise since ThreadActor doesn't have UPDATE_MESSAGE action
-                        // We'll sync back to ThreadService at the end
-                        setState((prev) => {
-                            const lastMessage = prev.messages[prev.messages.length - 1]
-                            
-                            // If last message is assistant, update it; otherwise add new one
-                            if (lastMessage?.role === 'assistant' && assistantMessageId === lastMessage.id) {
-                                return {
-                                    ...prev,
-                                    messages: [
-                                        ...prev.messages.slice(0, -1),
-                                        {
-                                            ...lastMessage,
-                                            content: accumulatedContent,
-                                        },
-                                    ],
-                                    lastUpdated: Date.now(),
-                                }
-                            } else {
-                                // Create new assistant message
-                                const newMessage: Message = {
-                                    id: assistantMessageId || crypto.randomUUID(),
-                                    role: 'assistant',
-                                    content: accumulatedContent,
-                                    timestamp: Date.now(),
-                                }
-                                assistantMessageId = newMessage.id
-                                return {
-                                    ...prev,
-                                    messages: [...prev.messages, newMessage],
-                                    lastUpdated: Date.now(),
-                                }
-                            }
-                        })
-                    }
-                    console.log(`Stream completed. Total chunks: ${chunkCount}, Content length: ${accumulatedContent.length}`)
-                } catch (streamError) {
-                    console.error('Error during streaming:', streamError)
-                    throw streamError
-                }
+				console.log(
+					`Stream completed. Total chunks: ${result.chunkCount}, Duration: ${result.durationMs}ms`,
+				);
 
-                // After streaming completes, ensure the final message is in ThreadService
-                // Remove any partial assistant message and add the final one
-                const finalState = await Effect.runPromise(
-                    Effect.gen(function* () {
-                        const threadService = yield* ThreadService
-                        return yield* threadService.getState()
-                    }).pipe(Effect.provide(serviceLayerRef.current!)),
-                )
+				// Final sync to ThreadService - ensure the last message matches final content
+				// The onChunk handler should have already updated it, but this ensures consistency
+				const finalSyncProgram = Effect.gen(function* () {
+					const threadService = yield* ThreadService;
+					const threadState = yield* threadService.getState();
+					const lastThreadMessage =
+						threadState.messages[threadState.messages.length - 1];
 
-                // If the last message in ThreadService is different from our streamed content, update it
-                const lastThreadMessage = finalState.messages[finalState.messages.length - 1]
-                if (
-                    lastThreadMessage?.role === 'assistant' &&
-                    lastThreadMessage.content !== accumulatedContent
-                ) {
-                    // Remove last message and add updated one
-                    await sendToThreadService({ type: 'RETRY_LAST_MESSAGE' })
-                    await addMessage('assistant', accumulatedContent)
-                } else if (lastThreadMessage?.role !== 'assistant') {
-                    // No assistant message in ThreadService, add it
-                    await addMessage('assistant', accumulatedContent)
-                }
+					// Only update if the last message is different from the final result
+					// This prevents creating duplicates if the streaming already completed correctly
+					if (
+						lastThreadMessage?.role === "assistant" &&
+						lastThreadMessage.content !== result.content
+					) {
+						// Update the last assistant message to match final content
+						yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
+						yield* threadService.send({
+							type: "ADD_MESSAGE",
+							payload: { role: "assistant", content: result.content },
+						});
+					}
+					// If last message is not assistant or content matches, no update needed
+				});
 
-                // Final sync with ThreadService to ensure consistency
-                await syncState()
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-                console.error('Error in sendMessage:', err)
-                console.error('Error stack:', err instanceof Error ? err.stack : 'No stack trace')
-                
-                // Ensure error is set in state
-                await sendToThreadService({ type: 'SET_ERROR', payload: errorMessage })
-                
-                // Also update React state directly to ensure error is visible
-                setState((prev) => ({
-                    ...prev,
-                    error: errorMessage,
-                    isLoading: false,
-                }))
-            } finally {
-                // Always clear loading state
-                await sendToThreadService({ type: 'SET_LOADING', payload: false })
-                setState((prev) => ({
-                    ...prev,
-                    isLoading: false,
-                }))
-            }
-        },
-        [addMessage, sendToThreadService, syncState],
-    )
+				await sharedRuntime.runPromise(finalSyncProgram);
+				// Refresh atom to ensure final state is reflected
+				refreshThreadState();
+			} catch (err) {
+				const errorMessage =
+					err instanceof Error ? err.message : "Unknown error occurred";
+				console.error("Error in sendMessage:", err);
+				console.error(
+					"Error stack:",
+					err instanceof Error ? err.stack : "No stack trace",
+				);
 
-    const value: ChatContextValue = {
-        state,
-        messages: state.messages,
-        isLoading: state.isLoading,
-        error: state.error ?? null,
-        addMessage,
-        clearMessages,
-        retryLastMessage,
-        sendMessage,
-    }
+				// Ensure error is set in ThreadService (atom will auto-refresh)
+				await sendToThreadService({ type: "SET_ERROR", payload: errorMessage });
+			} finally {
+				// Always clear loading state in ThreadService (atom will auto-refresh)
+				await sendToThreadService({ type: "SET_LOADING", payload: false });
+			}
+		},
+		[sendToThreadService, refreshThreadState],
+	);
 
-    return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
-}
+	const value: ChatContextValue = {
+		state,
+		messages: state.messages,
+		isLoading: state.isLoading,
+		error: state.error ?? null,
+		addMessage,
+		clearMessages,
+		retryLastMessage,
+		sendMessage,
+	};
+
+	return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+};

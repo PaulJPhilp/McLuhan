@@ -51,9 +51,11 @@ export async function createOpenAIStreamAdapter(
     const result = await vercelStreamText({
       model,
       messages: options.messages as any,
-      temperature: options.temperature,
-      topP: options.top_p,
-      abortSignal: options.signal,
+      ...(options.temperature !== undefined
+        ? { temperature: options.temperature }
+        : {}),
+      ...(options.top_p !== undefined ? { topP: options.top_p } : {}),
+      ...(options.signal !== undefined ? { abortSignal: options.signal } : {}),
     });
 
     console.log("[effect-ai-sdk] vercelStreamText returned successfully");
@@ -177,9 +179,11 @@ export async function createAnthropicStreamAdapter(
     const result = await vercelStreamText({
       model,
       messages: options.messages as any,
-      temperature: options.temperature,
-      topP: options.top_p,
-      abortSignal: options.signal,
+      ...(options.temperature !== undefined
+        ? { temperature: options.temperature }
+        : {}),
+      ...(options.top_p !== undefined ? { topP: options.top_p } : {}),
+      ...(options.signal !== undefined ? { abortSignal: options.signal } : {}),
     });
 
     let fullText = "";

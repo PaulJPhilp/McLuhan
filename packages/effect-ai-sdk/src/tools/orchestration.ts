@@ -115,7 +115,7 @@ export async function orchestrateTools(
             toolName: toolCall.toolName,
             args: toolCall.args,
             result: null,
-            error: validation.valid === false ? validation.error : undefined,
+            ...(validation.valid === false && validation.error ? { error: validation.error } : {}),
             isError: true,
           });
           continue;

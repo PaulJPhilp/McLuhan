@@ -1,172 +1,29 @@
-import type { LanguageModel } from "ai";
-import { Chunk, Effect, Schema } from "effect";
-import {
-  Message as EffectiveMessage,
-  TextPart,
-  createProvider,
-  getLanguageModel,
-  streamText,
-  toVercelMessages,
-  type ProviderName,
-} from "effect-ai-sdk";
-import { Message } from "../actors/ThreadActor";
+import type { LanguageModel, ModelMessage } from "ai";
+import { Chunk, Effect } from "effect";
+import { streamText, toVercelMessages } from "effect-ai-sdk";
+import type { Message } from "../../actors/ThreadActor.js";
+import { logDebug, logError, logWarn } from "../../utils/logger.js";
+import { getViteEnvValues } from "../ConfigService/index.js";
+import type { ChatRuntimeApi } from "./api.js";
+import { getProviderConfig, toEffectiveMessages } from "./helpers.js";
+import type { ChatRuntimeConfig } from "./types.js";
 
 /**
- * Configuration for ChatRuntime
+ * Helper to safely extract model identifier from LanguageModel
  */
-export interface ChatRuntimeConfig {
-  provider?: "openai" | "anthropic";
-  model?: string;
-  systemPrompt?: string;
-}
-
-/**
- * ChatRuntime API interface
- */
-export interface ChatRuntimeApi {
-  generateResponse: (
-    messages: readonly Message[]
-  ) => Effect.Effect<string, Error>;
-  streamResponse: (messages: readonly Message[]) => AsyncIterable<string>;
-}
-
-/**
- * Convert ThreadActor Message to EffectiveMessage
- */
-function toEffectiveMessage(message: Message): EffectiveMessage {
-  const role = message.role === "assistant" ? "model" : message.role;
-  const parts = Chunk.of(
-    new TextPart({ _tag: "Text", content: message.content })
-  );
-  return new EffectiveMessage({ role, parts });
-}
-
-/**
- * Convert ThreadActor Message[] to EffectiveMessage Chunk
- */
-function toEffectiveMessages(
-  messages: readonly Message[]
-): Chunk.Chunk<EffectiveMessage> {
-  return Chunk.fromIterable(messages.map(toEffectiveMessage));
-}
-
-/**
- * Environment schema for chat app configuration
- */
-const ChatEnvSchema = Schema.Struct({
-  VITE_OPENAI_API_KEY: Schema.optional(Schema.String),
-  VITE_ANTHROPIC_API_KEY: Schema.optional(Schema.String),
-  VITE_AI_PROVIDER: Schema.optional(Schema.String),
-  VITE_AI_MODEL: Schema.optional(Schema.String),
-  VITE_SYSTEM_PROMPT: Schema.optional(Schema.String),
-});
-
-/**
- * Get environment values from Vite's import.meta.env
- * Returns parsed values directly to avoid Effect TypeId mismatch between monorepos
- */
-function getViteEnvValues(): Schema.Schema.Type<typeof ChatEnvSchema> {
-  const viteEnv: Record<string, string | undefined> = {};
-  if (typeof import.meta !== "undefined" && import.meta.env) {
-    for (const key in import.meta.env) {
-      viteEnv[key] = import.meta.env[key] as string | undefined;
+function getModelId(model: LanguageModel): string {
+  if (typeof model === "object" && model !== null) {
+    if ("modelId" in model && typeof model.modelId === "string") {
+      return model.modelId;
+    }
+    if ("model" in model && typeof model.model === "string") {
+      return model.model;
+    }
+    if ("id" in model && typeof model.id === "string") {
+      return model.id;
     }
   }
-
-  // Parse schema synchronously (skipValidation=true means we can use empty object on error)
-  try {
-    return Schema.decodeUnknownSync(ChatEnvSchema)(viteEnv);
-  } catch {
-    return {} as Schema.Schema.Type<typeof ChatEnvSchema>;
-  }
-}
-
-/**
- * Get provider and model from environment variables using effect-ai-sdk
- * Accesses parsed values directly to avoid Effect TypeId mismatch
- */
-function getProviderConfig(): Effect.Effect<
-  { provider: LanguageModel; modelName: string },
-  Error | never
-> {
-  return Effect.gen(function* () {
-    const envValues = getViteEnvValues();
-    const openaiKey = envValues.VITE_OPENAI_API_KEY;
-    const anthropicKey = envValues.VITE_ANTHROPIC_API_KEY;
-    const providerEnv = envValues.VITE_AI_PROVIDER;
-    const modelEnv = envValues.VITE_AI_MODEL;
-
-    // Determine provider name
-    let providerName: ProviderName;
-    if (providerEnv === "anthropic" && anthropicKey) {
-      providerName = "anthropic";
-    } else if (providerEnv === "openai" && openaiKey) {
-      providerName = "openai";
-    } else if (openaiKey) {
-      providerName = "openai";
-    } else if (anthropicKey) {
-      providerName = "anthropic";
-    } else {
-      return yield* Effect.fail(
-        new Error(
-          "No API key found. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file"
-        )
-      );
-    }
-
-    // Get the API key for the selected provider
-    const apiKey = providerName === "openai" ? openaiKey : anthropicKey;
-    if (!apiKey) {
-      return yield* Effect.fail(
-        new Error(`API key not found for provider: ${providerName}`)
-      );
-    }
-
-    // Log API key configuration (masked for security)
-    const maskedKey =
-      apiKey.length > 8
-        ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`
-        : "***";
-    console.log("=== PROVIDER CONFIGURATION ===");
-    console.log("Provider:", providerName);
-    console.log("API Key (masked):", maskedKey);
-    console.log("API Key length:", apiKey.length);
-    console.log("API Key starts with 'sk-':", apiKey.startsWith("sk-"));
-
-    // Create provider instance using effect-ai-sdk's createProvider
-    const provider = yield* createProvider(providerName, {
-      apiKey,
-    });
-    console.log("✓ Provider created:", typeof provider);
-
-    // Determine model name
-    const modelName =
-      modelEnv ||
-      (providerName === "openai" ? "gpt-4o" : "claude-3-5-sonnet-20241022");
-
-    // Get language model using effect-ai-sdk's getLanguageModel
-    const model = yield* getLanguageModel(provider, modelName);
-
-    // Log model configuration for debugging
-    console.log("Model obtained:", {
-      modelId: (model as any).modelId || "unknown",
-      providerType: providerName,
-      modelName,
-      hasProvider: !!provider,
-    });
-
-    return { provider: model, modelName };
-  }).pipe(
-    Effect.catchAll((error) =>
-      Effect.fail(
-        new Error(
-          `Failed to initialize provider: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        )
-      )
-    )
-  );
+  return "unknown";
 }
 
 /**
@@ -175,7 +32,7 @@ function getProviderConfig(): Effect.Effect<
 export class ChatRuntime extends Effect.Service<ChatRuntime>()(
   "chat/ChatRuntime",
   {
-    effect: Effect.fn(function* (config?: ChatRuntimeConfig) {
+    effect: Effect.fn(function* (_config?: ChatRuntimeConfig) {
       // Get provider configuration
       const { provider: model, modelName } = yield* getProviderConfig();
 
@@ -184,18 +41,33 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
 
       // Get system prompt from environment (access parsed values directly)
       const envValues = getViteEnvValues();
-      const systemPrompt = config?.systemPrompt || envValues.VITE_SYSTEM_PROMPT;
+      const systemPrompt =
+        _config?.systemPrompt || envValues.VITE_SYSTEM_PROMPT;
 
       return {
         generateResponse: (messages: readonly Message[]) =>
           Effect.gen(function* () {
             // Convert messages to EffectiveMessage format
             const effectiveMessages = toEffectiveMessages(messages);
-            const vercelMessages = yield* toVercelMessages(effectiveMessages);
+            const vercelMessages: ModelMessage[] = yield* toVercelMessages(
+              effectiveMessages
+            );
 
             // Use streaming and collect the result
-            const streamOptions: any = {
-              messages: vercelMessages as any,
+            // streamText accepts Omit<StreamOptions, "provider"> where StreamOptions is from effect-ai-sdk internal types
+            const streamOptions: {
+              messages: Array<
+                | { role: "system" | "user" | "assistant"; content: string }
+                | Record<string, unknown>
+              >;
+              system?: string;
+              model: string;
+            } = {
+              messages: vercelMessages as Array<
+                | { role: "system" | "user" | "assistant"; content: string }
+                | Record<string, unknown>
+              >,
+              model: currentModelName,
             };
             if (systemPrompt) {
               streamOptions.system = systemPrompt;
@@ -255,19 +127,31 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
             }
 
             // Create stream handle
-            const streamOptions: any = {
-              messages: vercelMessages as any,
+            // streamText accepts Omit<StreamOptions, "provider"> where StreamOptions is from effect-ai-sdk internal types
+            const streamOptions: {
+              messages: Array<
+                | { role: "system" | "user" | "assistant"; content: string }
+                | Record<string, unknown>
+              >;
+              system?: string;
+              model: string;
+            } = {
+              messages: vercelMessages as Array<
+                | { role: "system" | "user" | "assistant"; content: string }
+                | Record<string, unknown>
+              >,
+              model: currentModelName,
             };
             if (systemPrompt) {
               streamOptions.system = systemPrompt;
             }
 
-            console.log("=== STREAM CREATION ===");
-            console.log("Creating stream handle with options:", {
+            logDebug("=== STREAM CREATION ===");
+            logDebug("Creating stream handle with options:", {
               messageCount: vercelMessages.length,
               hasSystemPrompt: !!systemPrompt,
               modelName: currentModelName,
-              messages: vercelMessages.map((m: any) => ({
+              messages: vercelMessages.map((m) => ({
                 role: m.role,
                 content:
                   typeof m.content === "string"
@@ -277,12 +161,15 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
             });
 
             // Verify model configuration
-            console.log("Model details:", {
-              modelId: (model as any).modelId || (model as any).id || "unknown",
+            logDebug("Model details:", {
+              modelId: getModelId(model),
               providerType: typeof model,
-              modelKeys: Object.keys(model || {}).slice(0, 10),
+              modelKeys:
+                typeof model === "object" && model !== null
+                  ? Object.keys(model).slice(0, 10)
+                  : [],
             });
-            console.log("Stream options being passed to streamText:", {
+            logDebug("Stream options being passed to streamText:", {
               messageCount: streamOptions.messages?.length,
               hasSystem: !!streamOptions.system,
               hasTemperature: "temperature" in streamOptions,
@@ -292,20 +179,17 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
             // Create the stream handle - this doesn't make the API call yet
             // The API call happens lazily when we first read from the stream
             const streamHandle = streamText(model, streamOptions);
-            console.log("✓ Stream handle created");
-            console.log("✓ Stream readable:", !!streamHandle.readable);
-            console.log(
-              "✓ Stream readable.locked:",
-              streamHandle.readable.locked
-            );
-            console.log(
+            logDebug("✓ Stream handle created");
+            logDebug("✓ Stream readable:", !!streamHandle.readable);
+            logDebug("✓ Stream readable.locked:", streamHandle.readable.locked);
+            logDebug(
               "→ Next: Getting reader will trigger stream start() function"
             );
 
             // Read from stream and yield text chunks
             const reader = streamHandle.readable.getReader();
-            console.log("✓ Reader obtained");
-            console.log(
+            logDebug("✓ Reader obtained");
+            logDebug(
               "✓ Stream readable.locked (should be true):",
               streamHandle.readable.locked
             );
@@ -319,34 +203,34 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
             try {
               // Add a timeout to detect hanging streams
               const timeoutId = setTimeout(() => {
-                console.error(
+                logError(
                   "Stream read timeout after 30 seconds - canceling reader"
                 );
-                console.error(
+                logError(
                   "This usually means the API call is hanging or failed silently."
                 );
                 reader.cancel(new Error("Stream timeout after 30 seconds"));
               }, 30000);
 
-              console.log("=== STARTING STREAM READ LOOP ===");
+              logDebug("=== STARTING STREAM READ LOOP ===");
               while (true) {
                 readCount++;
                 const readStartTime = Date.now();
 
                 if (readCount === 1) {
-                  console.log("--- FIRST READ (triggers API call) ---");
-                  console.log(`Model: ${currentModelName}`);
-                  console.log(
+                  logDebug("--- FIRST READ (triggers API call) ---");
+                  logDebug(`Model: ${currentModelName}`);
+                  logDebug(
                     "Calling reader.read() - this will trigger stream start() function"
                   );
-                  console.log(
+                  logDebug(
                     "The stream's start() function will call createOpenAIStreamAdapter/createAnthropicStreamAdapter"
                   );
-                  console.log(
+                  logDebug(
                     "Which will call vercelStreamText() to make the actual API request"
                   );
                 } else {
-                  console.log(`--- READ ATTEMPT ${readCount} ---`);
+                  logDebug(`--- READ ATTEMPT ${readCount} ---`);
                 }
 
                 let readResult;
@@ -359,29 +243,29 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
                   // Track if stream has started (start() function has been called)
                   if (!streamStarted) {
                     streamStarted = true;
-                    console.log(
+                    logDebug(
                       "✓ Stream start() function invoked (API call should begin now)"
                     );
-                    console.log("→ Waiting for API response...");
-                    console.log(
+                    logDebug("→ Waiting for API response...");
+                    logDebug(
                       "→ Check Network tab for request to api.openai.com or api.anthropic.com"
                     );
                   }
 
-                  console.log("Awaiting reader.read() promise...");
+                  logDebug("Awaiting reader.read() promise...");
                   readResult = await readPromise;
                   const readDuration = Date.now() - readStartTime;
-                  console.log(`✓ Read completed in ${readDuration}ms`);
+                  logDebug(`✓ Read completed in ${readDuration}ms`);
                 } catch (readErr) {
                   const readDuration = Date.now() - readStartTime;
-                  console.error("=== READ ERROR ===");
-                  console.error(`Error after ${readDuration}ms:`, readErr);
-                  console.error("Error type:", readErr?.constructor?.name);
-                  console.error(
+                  logError("=== READ ERROR ===");
+                  logError(`Error after ${readDuration}ms:`, readErr);
+                  logError("Error type:", readErr?.constructor?.name);
+                  logError(
                     "Error message:",
                     readErr instanceof Error ? readErr.message : String(readErr)
                   );
-                  console.error(
+                  logError(
                     "Error stack:",
                     readErr instanceof Error ? readErr.stack : "No stack"
                   );
@@ -400,7 +284,7 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
 
                 const { done, value } = readResult;
 
-                console.log(`Read result:`, {
+                logDebug(`Read result:`, {
                   done,
                   hasValue: !!value,
                   valueType: value?.type,
@@ -409,17 +293,17 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
 
                 if (done) {
                   const totalDuration = Date.now() - startTime;
-                  console.log("=== STREAM COMPLETED ===");
-                  console.log(`Total duration: ${totalDuration}ms`);
-                  console.log(`Read attempts: ${readCount}`);
-                  console.log(`Buffer length: ${buffer.length}`);
-                  console.log(`Has yielded: ${hasYielded}`);
-                  console.log(`Stream started: ${streamStarted}`);
+                  logDebug("=== STREAM COMPLETED ===");
+                  logDebug(`Total duration: ${totalDuration}ms`);
+                  logDebug(`Read attempts: ${readCount}`);
+                  logDebug(`Buffer length: ${buffer.length}`);
+                  logDebug(`Has yielded: ${hasYielded}`);
+                  logDebug(`Stream started: ${streamStarted}`);
                   clearTimeout(timeoutId);
 
                   // If we haven't yielded anything and we have buffer, yield it
                   if (!hasYielded && buffer) {
-                    console.log(
+                    logDebug(
                       "Yielding final buffer:",
                       buffer.substring(0, 100)
                     );
@@ -429,8 +313,8 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
                   break;
                 }
 
-                console.log("--- PROCESSING STREAM VALUE ---");
-                console.log("Value details:", {
+                logDebug("--- PROCESSING STREAM VALUE ---");
+                logDebug("Value details:", {
                   type: value?.type,
                   hasDelta: value && "delta" in value,
                   hasText: value && "text" in value,
@@ -448,47 +332,45 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
                 // Handle token-delta events
                 if (value?.type === "token-delta") {
                   buffer += value.delta;
-                  console.log(
+                  logDebug(
                     `✓ Token-delta received: ${value.delta.length} chars`
                   );
-                  console.log(`Preview: "${value.delta.substring(0, 50)}"`);
-                  console.log(`Total buffer: ${buffer.length} chars`);
-                  console.log("→ Yielding chunk to caller");
+                  logDebug(`Preview: "${value.delta.substring(0, 50)}"`);
+                  logDebug(`Total buffer: ${buffer.length} chars`);
+                  logDebug("→ Yielding chunk to caller");
                   yield value.delta;
                   hasYielded = true;
-                  console.log("✓ Chunk yielded");
+                  logDebug("✓ Chunk yielded");
                 } else if (value?.type === "final-message") {
-                  console.log("✓ Final-message received");
-                  console.log(`Text length: ${value.text?.length}`);
-                  console.log(`Current buffer length: ${buffer.length}`);
+                  logDebug("✓ Final-message received");
+                  logDebug(`Text length: ${value.text?.length}`);
+                  logDebug(`Current buffer length: ${buffer.length}`);
                   // If we get a final message, yield any remaining buffer
                   if (buffer !== value.text) {
                     const remaining = value.text.slice(buffer.length);
                     if (remaining) {
-                      console.log(
-                        `Yielding remaining: ${remaining.length} chars`
-                      );
-                      console.log(`Preview: "${remaining.substring(0, 100)}"`);
+                      logDebug(`Yielding remaining: ${remaining.length} chars`);
+                      logDebug(`Preview: "${remaining.substring(0, 100)}"`);
                       yield remaining;
                       hasYielded = true;
                     }
                   }
                   buffer = value.text;
-                  console.log(
+                  logDebug(
                     `✓ Buffer updated to final text (${buffer.length} chars)`
                   );
                 } else if (value?.type === "complete") {
                   // Stream completion signal - we can break here
-                  console.log("✓ Stream completion signal received");
+                  logDebug("✓ Stream completion signal received");
                   break;
                 } else if (value?.type === "error") {
-                  console.error("=== STREAM ERROR EVENT ===");
-                  console.error("Error:", value.error);
+                  logError("=== STREAM ERROR EVENT ===");
+                  logError("Error:", value.error);
                   throw value.error;
                 } else {
-                  console.warn("⚠ Unhandled stream event type:", value?.type);
-                  console.warn("Full value:", value);
-                  console.warn("This event type is not being processed");
+                  logWarn("⚠ Unhandled stream event type:", value?.type);
+                  logWarn("Full value:", value);
+                  logWarn("This event type is not being processed");
                 }
               }
 
@@ -497,18 +379,16 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
               // If we never yielded anything, provide a more helpful error
               if (!hasYielded) {
                 const totalDuration = Date.now() - startTime;
-                console.error("=== NO CONTENT RECEIVED ===");
-                console.error(`Stream completed after ${totalDuration}ms`);
-                console.error(`Read attempts: ${readCount}`);
-                console.error(`Buffer length: ${buffer.length}`);
-                console.error(`Stream started: ${streamStarted}`);
-                console.error("Possible causes:");
-                console.error(
-                  "1. API call failed silently (check Network tab)"
-                );
-                console.error("2. API key is invalid or expired");
-                console.error("3. Network/CORS issue preventing API call");
-                console.error("4. Stream adapter failed to enqueue events");
+                logError("=== NO CONTENT RECEIVED ===");
+                logError(`Stream completed after ${totalDuration}ms`);
+                logError(`Read attempts: ${readCount}`);
+                logError(`Buffer length: ${buffer.length}`);
+                logError(`Stream started: ${streamStarted}`);
+                logError("Possible causes:");
+                logError("1. API call failed silently (check Network tab)");
+                logError("2. API key is invalid or expired");
+                logError("3. Network/CORS issue preventing API call");
+                logError("4. Stream adapter failed to enqueue events");
                 throw new Error(
                   `Stream completed but no content was received after ${readCount} read attempts (${totalDuration}ms). ` +
                     `This usually means the API call failed or returned an empty response. ` +
@@ -517,17 +397,17 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
                 );
               } else {
                 const totalDuration = Date.now() - startTime;
-                console.log("=== STREAM SUCCESS ===");
-                console.log(`Total duration: ${totalDuration}ms`);
-                console.log(`Total chunks yielded: ${readCount}`);
-                console.log(`Final buffer length: ${buffer.length}`);
+                logDebug("=== STREAM SUCCESS ===");
+                logDebug(`Total duration: ${totalDuration}ms`);
+                logDebug(`Total chunks yielded: ${readCount}`);
+                logDebug(`Final buffer length: ${buffer.length}`);
               }
             } catch (streamError) {
               const totalDuration = Date.now() - startTime;
-              console.error("=== STREAM ERROR ===");
-              console.error(`Error after ${totalDuration}ms`);
-              console.error("Error:", streamError);
-              console.error("Error details:", {
+              logError("=== STREAM ERROR ===");
+              logError(`Error after ${totalDuration}ms`);
+              logError("Error:", streamError);
+              logError("Error details:", {
                 message:
                   streamError instanceof Error
                     ? streamError.message
@@ -542,8 +422,8 @@ export class ChatRuntime extends Effect.Service<ChatRuntime>()(
               throw streamError;
             } finally {
               reader.releaseLock();
-              console.log("✓ Stream reader released");
-              console.log("=== STREAM CLEANUP COMPLETE ===");
+              logDebug("✓ Stream reader released");
+              logDebug("=== STREAM CLEANUP COMPLETE ===");
             }
           } catch (error) {
             throw error instanceof Error ? error : new Error(String(error));

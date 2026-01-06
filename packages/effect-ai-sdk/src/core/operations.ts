@@ -168,15 +168,19 @@ export function generateText(
               ? (result.usage.totalTokens as number)
               : 0,
         },
-        warnings: result.warnings?.map((w) => {
-          const warning = w as { type?: string; setting?: string };
-          return {
-            code: warning.type || "warning",
-            message: warning.type
-              ? `${warning.type}: ${warning.setting || ""}`
-              : "warning",
-          };
-        }),
+        ...(result.warnings && result.warnings.length > 0
+          ? {
+              warnings: result.warnings.map((w) => {
+                const warning = w as { type?: string; setting?: string };
+                return {
+                  code: warning.type || "warning",
+                  message: warning.type
+                    ? `${warning.type}: ${warning.setting || ""}`
+                    : "warning",
+                };
+              }),
+            }
+          : {}),
       };
 
       yield* Effect.log("Text generation completed successfully", {
@@ -398,16 +402,16 @@ export function generateImages(
             model,
             prompt,
             n: options?.n ?? 1,
-            size: options?.size as
-              | "1024x1024"
-              | "1792x1024"
-              | "1024x1792"
-              | undefined,
-            aspectRatio: options?.aspectRatio as
-              | "1:1"
-              | "16:9"
-              | "9:16"
-              | undefined,
+            ...(options?.size
+              ? {
+                  size: options.size as "1024x1024" | "1792x1024" | "1024x1792",
+                }
+              : {}),
+            ...(options?.aspectRatio
+              ? {
+                  aspectRatio: options.aspectRatio as "1:1" | "16:9" | "9:16",
+                }
+              : {}),
           })
       ).pipe(
         Effect.mapError(
@@ -436,7 +440,7 @@ export function generateImages(
           return image.url || image.data || "";
         }),
         parameters: {
-          size: options?.size,
+          ...(options?.size ? { size: options.size } : {}),
         },
         usage: {
           promptTokens: 0, // Image generation doesn't use text tokens in the same way
@@ -485,8 +489,8 @@ export function generateAudio(
           await experimental_generateSpeech({
             model,
             text: input,
-            voice: options?.voice as any,
-            speed: options?.speed,
+            ...(options?.voice ? { voice: options.voice as any } : {}),
+            ...(options?.speed !== undefined ? { speed: options.speed } : {}),
           })
       ).pipe(
         Effect.mapError(
@@ -514,8 +518,8 @@ export function generateAudio(
             : "",
         format: "mp3", // Default format
         parameters: {
-          voice: options?.voice,
-          speed: options?.speed,
+          ...(options?.voice ? { voice: options.voice } : {}),
+          ...(options?.speed !== undefined ? { speed: options.speed } : {}),
         },
         usage: {
           promptTokens: 0,
@@ -604,10 +608,11 @@ export function transcribeAudio(
             confidence: segment.confidence ?? 0,
           };
         }),
-        detectedLanguage:
-          "language" in result ? (result.language as string) : undefined,
+        ...("language" in result && result.language
+          ? { detectedLanguage: result.language as string }
+          : {}),
         parameters: {
-          language: options?.language,
+          ...(options?.language ? { language: options.language } : {}),
         },
         usage: {
           promptTokens: 0,

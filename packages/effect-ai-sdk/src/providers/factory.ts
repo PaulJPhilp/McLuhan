@@ -55,15 +55,15 @@ export function createProvider(
         case "openai":
           return createOpenAI({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
-            organization: config.organization,
-            project: config.project,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+            ...(config.organization ? { organization: config.organization } : {}),
+            ...(config.project ? { project: config.project } : {}),
           });
 
         case "anthropic":
           return createAnthropic({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
           });
 
         case "google":
@@ -73,7 +73,7 @@ export function createProvider(
         case "groq":
           return createGroq({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
           });
 
         case "deepseek":

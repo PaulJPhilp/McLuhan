@@ -9,6 +9,9 @@
     "packages/*",
     "apps/*"
   ],
+  "overrides": {
+    "effect-json": "^0.2.0"
+  },
   "scripts": {
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
@@ -25,6 +28,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.2"
+    "@ai-sdk/openai": "^3.0.2",
+    "effect-json": "^0.2.0"
   }
 }

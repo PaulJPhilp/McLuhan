@@ -74,7 +74,7 @@ function zodToJsonSchema(schema: z.ZodType<any, any, any>): {
     return {
       type: "object",
       properties,
-      required: required.length > 0 ? required : undefined,
+      ...(required.length > 0 ? { required } : {}),
     };
   }
 
