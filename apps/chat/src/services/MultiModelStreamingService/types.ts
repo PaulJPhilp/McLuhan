@@ -33,6 +33,7 @@ export interface MultiModelStreamOptions {
 	readonly onModelComplete?: (result: ModelStreamResult) => void;
 	readonly onError?: (modelId: string, error: Error) => void;
 	readonly timeoutMs?: number;
+	readonly batchSize?: number; // Default: 5, number of models to run in parallel per batch
 }
 
 export interface ModelConfig {

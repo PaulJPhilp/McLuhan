@@ -1,4 +1,4 @@
-import { Chunk, Effect, Metric } from "effect";
+import { Chunk, Effect, Either, Metric } from "effect";
 import {
 	toVercelMessages,
 	createProvider,
@@ -19,6 +19,18 @@ import {
 import type { ModelStreamResult, MultiModelStreamOptions } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 30000;
+const DEFAULT_BATCH_SIZE = 5;
+
+/**
+ * Split an array into batches of specified size
+ */
+function chunkArray<T>(array: readonly T[], size: number): T[][] {
+	const chunks: T[][] = [];
+	for (let i = 0; i < array.length; i += size) {
+		chunks.push(array.slice(i, i + size));
+	}
+	return chunks;
+}
 
 /**
  * Get API key for a provider
@@ -332,6 +344,7 @@ export class MultiModelStreamingService extends Effect.Service<MultiModelStreami
 							onModelComplete,
 							onError,
 							timeoutMs = DEFAULT_TIMEOUT_MS,
+							batchSize = DEFAULT_BATCH_SIZE,
 						} = options;
 
 						// Validate inputs
@@ -345,30 +358,72 @@ export class MultiModelStreamingService extends Effect.Service<MultiModelStreami
 
 						const results: ModelStreamResult[] = [];
 
-						// Stream each model sequentially
-						for (const modelConfig of modelConfigs) {
-							// Notify that model is starting
-							if (onModelStart) {
-								onModelStart(modelConfig.modelId, modelConfig.provider);
+						// Split models into batches
+						const batches = chunkArray(modelConfigs, batchSize);
+
+						// Process batches sequentially
+						for (const batch of batches) {
+							// Notify that models in batch are starting
+							for (const modelConfig of batch) {
+								if (onModelStart) {
+									onModelStart(modelConfig.modelId, modelConfig.provider);
+								}
 							}
 
-							const result = yield* streamSingleModel(modelConfig, messages, {
-								...(onChunk ? { onChunk } : {}),
-								timeoutMs,
-							});
+							// Run batch in parallel using Effect.all
+							const batchResults = yield* Effect.all(
+								batch.map((modelConfig) =>
+									streamSingleModel(modelConfig, messages, {
+										...(onChunk ? { onChunk } : {}),
+										timeoutMs,
+									}),
+								),
+								{
+									concurrency: batch.length, // Run all in batch concurrently
+									mode: "either", // Collect all results even if some fail
+								},
+							);
 
-							results.push(result);
+							// Process results and call callbacks
+							// Note: streamSingleModel never fails (returns ModelStreamResult with success: false on error)
+							// So Either will always be Right, but we extract it for clarity
+							for (const eitherResult of batchResults) {
+								// Extract result from Either (will always be Right since streamSingleModel never fails)
+								const result = Either.match(eitherResult, {
+									onLeft: () => {
+										// This should never happen, but provide fallback for type safety
+										const modelConfig = batch[0];
+										return {
+											modelId: modelConfig?.modelId || "unknown",
+											provider: modelConfig?.provider || "unknown",
+											content: "",
+											success: false,
+											error: "Unexpected error",
+											durationMs: 0,
+											chunkCount: 0,
+											metrics: {
+												timeToFirstTokenMs: null,
+												totalDurationMs: 0,
+												outputTokens: 0,
+											},
+										} satisfies ModelStreamResult;
+									},
+									onRight: (result) => result,
+								});
 
-							// Call callbacks
-							if (onModelComplete) {
-								onModelComplete(result);
-							}
+								results.push(result);
 
-							if (!result.success && onError) {
-								onError(
-									modelConfig.modelId,
-									new Error(result.error || "Unknown error"),
-								);
+								// Call callbacks immediately as results arrive
+								if (onModelComplete) {
+									onModelComplete(result);
+								}
+
+								if (!result.success && onError) {
+									onError(
+										result.modelId,
+										new Error(result.error || "Unknown error"),
+									);
+								}
 							}
 						}
 
