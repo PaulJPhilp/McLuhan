@@ -1,15 +1,58 @@
 import { FC, useEffect, useRef, useState } from "react";
+import { Effect } from "effect";
 import { useChatContext } from "../context/ChatContext";
 import { MessageComponent } from "./Message";
+import { ModelLoadingIndicator } from "./ModelLoadingIndicator";
+import { ModelConfigService } from "../services/ModelConfigService/index.js";
+import { sharedRuntime } from "../context/atomRuntime.js";
 
 /**
  * ChatThread component (like assistant-ui's Thread)
  * Displays the message history
  */
 export const ChatThread: FC = () => {
-	const { messages, isLoading, error } = useChatContext();
+	const { messages, isLoading, error, loadingModels } = useChatContext();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const [autoScroll, setAutoScroll] = useState(true);
+	const [modelInfos, setModelInfos] = useState<Map<string, { displayName: string; provider: string }>>(new Map());
+
+	// Load model info for loading models
+	useEffect(() => {
+		if (loadingModels.length === 0) {
+			setModelInfos(new Map());
+			return;
+		}
+
+		const loadModelInfos = async () => {
+			const program = Effect.gen(function* () {
+				const service = yield* ModelConfigService;
+				const availableModels = yield* service.getAvailableModels();
+				return availableModels;
+			});
+
+			try {
+				const availableModels = await sharedRuntime.runPromise(
+					program.pipe(Effect.provide(ModelConfigService.Default())),
+				);
+
+				const infos = new Map<string, { displayName: string; provider: string }>();
+				for (const modelId of loadingModels) {
+					const model = availableModels.find((m) => m.modelId === modelId);
+					if (model) {
+						infos.set(modelId, {
+							displayName: model.displayName,
+							provider: model.provider,
+						});
+					}
+				}
+				setModelInfos(infos);
+			} catch (error) {
+				console.error("Failed to load model info:", error);
+			}
+		};
+
+		loadModelInfos();
+	}, [loadingModels]);
 
 	const scrollToBottom = () => {
 		if (autoScroll && messagesEndRef.current?.scrollIntoView) {
@@ -19,7 +62,7 @@ export const ChatThread: FC = () => {
 
 	useEffect(() => {
 		scrollToBottom();
-	}, [messages, autoScroll]);
+	}, [messages, autoScroll, loadingModels]);
 
 	return (
 		<div className="flex-1 overflow-y-auto px-6 py-4 bg-white">
@@ -32,11 +75,43 @@ export const ChatThread: FC = () => {
 				</div>
 			) : (
 				<div className="space-y-4">
-					{messages.map((message) => (
-						<MessageComponent key={message.id} message={message} />
-					))}
+					{messages.map((message) => {
+						console.log("Rendering message:", {
+							id: message.id,
+							role: message.role,
+							contentLength: message.content.length,
+							hasMetadata: !!message.metadata,
+							metadata: message.metadata,
+						});
+						return <MessageComponent key={message.id} message={message} />;
+					})}
 
-					{isLoading && (
+					{/* Per-model loading indicators */}
+					{loadingModels.map((modelId) => {
+						const modelInfo = modelInfos.get(modelId);
+						// Don't show loading indicator if we already have a message for this model
+						const hasMessage = messages.some(
+							(m) =>
+								m.role === "assistant" &&
+								m.metadata &&
+								typeof m.metadata === "object" &&
+								(m.metadata as Record<string, unknown>).modelId === modelId,
+						);
+						
+						if (hasMessage) return null;
+
+						return (
+							<ModelLoadingIndicator
+								key={`loading-${modelId}`}
+								modelId={modelId}
+								provider={modelInfo?.provider || "unknown"}
+								displayName={modelInfo?.displayName}
+							/>
+						);
+					})}
+
+					{/* Fallback loading indicator for single-model mode */}
+					{isLoading && loadingModels.length === 0 && (
 						<div className="flex justify-start">
 							<div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-2">
 								<div className="flex space-x-2">

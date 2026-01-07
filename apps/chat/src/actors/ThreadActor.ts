@@ -33,7 +33,11 @@ export class ThreadState extends Schema.Class<ThreadState>("ThreadState")({
 export type ThreadMessage =
 	| {
 			type: "ADD_MESSAGE";
-			payload: { role: "user" | "assistant" | "system"; content: string };
+			payload: {
+				role: "user" | "assistant" | "system";
+				content: string;
+				metadata?: Record<string, unknown>;
+			};
 	  }
 	| { type: "CLEAR_MESSAGES" }
 	| { type: "SET_LOADING"; payload: boolean }
@@ -64,7 +68,19 @@ export const createThreadActorConfig = () => {
 						role: message.payload.role,
 						content: message.payload.content,
 						timestamp: Date.now(),
+						...(message.payload.metadata && {
+							// Effect Schema Record with object schema creates Record<string, unknown> at runtime
+							metadata: message.payload.metadata as Record<string, unknown>,
+						}),
 					};
+
+					console.log("ThreadActor: Adding message", {
+						id: newMessage.id,
+						role: newMessage.role,
+						contentLength: newMessage.content.length,
+						hasMetadata: !!newMessage.metadata,
+						metadataKeys: newMessage.metadata ? Object.keys(newMessage.metadata) : [],
+					});
 
 					return {
 						...state,

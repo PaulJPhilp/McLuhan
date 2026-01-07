@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { FC, useRef, useState } from "react";
 import { useChatContext } from "../context/ChatContext";
+import { ModelSelector } from "./ModelSelector";
 
 /**
  * Composer component (like assistant-ui's Composer)
@@ -10,6 +11,7 @@ export const Composer: FC = () => {
 	const { isLoading, sendMessage } = useChatContext();
 	const [input, setInput] = useState("");
 	const [isSending, setIsSending] = useState(false);
+	const [selectedModels, setSelectedModels] = useState<string[]>([]);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -20,7 +22,7 @@ export const Composer: FC = () => {
 		setIsSending(true);
 
 		try {
-			await sendMessage(input);
+			await sendMessage(input, selectedModels.length > 0 ? selectedModels : undefined);
 			setInput("");
 			// Reset textarea height
 			if (textareaRef.current) {
@@ -58,6 +60,10 @@ export const Composer: FC = () => {
 
 	return (
 		<div className="border-t border-chat-border px-6 py-4 bg-white">
+			<ModelSelector
+				selectedModels={selectedModels}
+				onSelectionChange={setSelectedModels}
+			/>
 			<form onSubmit={handleSubmit} className="flex gap-3">
 				<textarea
 					ref={textareaRef}

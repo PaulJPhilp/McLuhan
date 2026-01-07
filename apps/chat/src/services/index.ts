@@ -124,3 +124,29 @@ export {
 	ThreadService,
 } from "./ThreadService/index.js";
 export type { ThreadServiceApi } from "./ThreadService/index.js";
+
+// ModelConfigService
+export {
+	ModelConfigService,
+	getModelColor,
+	getAllColors,
+} from "./ModelConfigService/index.js";
+export type {
+	ModelConfig,
+	ModelColor,
+	ModelInfo,
+	ModelConfigServiceApi,
+} from "./ModelConfigService/index.js";
+
+// MultiModelStreamingService
+export {
+	MultiModelStreamingService,
+	MultiModelStreamError,
+	ModelStreamError,
+} from "./MultiModelStreamingService/index.js";
+export type {
+	MultiModelStreamingServiceApi,
+	ModelStreamResult,
+	MultiModelStreamOptions,
+} from "./MultiModelStreamingService/index.js";
+export type { ModelConfig as MultiModelStreamConfig } from "./MultiModelStreamingService/types.js";

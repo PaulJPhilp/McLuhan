@@ -1,11 +1,13 @@
 import { Result, useAtomRefresh, useAtomValue } from "@effect-atom/atom-react";
 import { Effect } from "effect";
-import { FC, ReactNode, createContext, useCallback, useContext } from "react";
+import { FC, ReactNode, createContext, useCallback, useContext, useState } from "react";
 import type {
 	Message,
 	ThreadMessage,
 	ThreadState,
 } from "../actors/ThreadActor.js";
+import { MultiModelStreamingService } from "../services/MultiModelStreamingService/index.js";
+import { ModelConfigService } from "../services/ModelConfigService/index.js";
 import { StreamingService } from "../services/StreamingService/index.js";
 import { ThreadService } from "../services/ThreadService/index.js";
 import { sharedRuntime } from "./atomRuntime.js";
@@ -19,6 +21,7 @@ interface ChatContextValue {
 	state: ThreadState;
 	messages: readonly Message[];
 	isLoading: boolean;
+	loadingModels: readonly string[]; // Model IDs that are currently loading
 	error: string | null;
 
 	// Thread actions
@@ -30,7 +33,7 @@ interface ChatContextValue {
 	retryLastMessage: () => Promise<void>;
 
 	// Chat runtime
-	sendMessage: (content: string) => Promise<void>;
+	sendMessage: (content: string, modelIds?: string[]) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -55,6 +58,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 	// Automatic reactive state - reads from ThreadService via atom
 	const stateResult = useAtomValue(threadStateAtom);
 	const refreshThreadState = useAtomRefresh(threadStateAtom);
+	
+	// Per-model loading state (local React state, not in ThreadService)
+	const [loadingModels, setLoadingModels] = useState<string[]>([]);
 
 	const state: ThreadState = Result.getOrElse(stateResult, () => ({
 		id: crypto.randomUUID(),
@@ -102,8 +108,11 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 	}, [sendToThreadService]);
 
 	const sendMessage = useCallback(
-		async (content: string) => {
+		async (content: string, modelIds?: string[]) => {
 			if (!content.trim()) return;
+
+			// Determine if we're using multi-model mode
+			const useMultiModel = modelIds && modelIds.length > 1;
 
 			try {
 				// Set loading state
@@ -136,111 +145,396 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 					);
 				}
 
-				// Create assistant message placeholder before streaming starts
-				// This ensures we have a message to update during streaming
-				await sendToThreadService({
-					type: "ADD_MESSAGE",
-					payload: { role: "assistant", content: "" },
-				});
-
-				// Use StreamingService to handle the streaming
-				const streamProgram = Effect.gen(function* () {
-					const streaming = yield* StreamingService;
-
-					return yield* streaming.streamChat({
-						messages: currentMessages,
-						onChunk: (chunk, accumulated) => {
-							// Update ThreadService during streaming for incremental updates
-							// The atom will automatically refresh React components
-							const updateProgram = Effect.gen(function* () {
-								const threadService = yield* ThreadService;
-								const currentState = yield* threadService.getState();
-								const lastMessage =
-									currentState.messages[currentState.messages.length - 1];
-
-								// Always update the last message if it's an assistant message
-								// Otherwise add a new one (shouldn't happen, but safety check)
-								if (lastMessage?.role === "assistant") {
-									// Remove the last assistant message and add updated one
-									yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
-									yield* threadService.send({
-										type: "ADD_MESSAGE",
-										payload: { role: "assistant", content: accumulated },
-									});
-								} else {
-									// Fallback: add new assistant message if last isn't assistant
-									yield* threadService.send({
-										type: "ADD_MESSAGE",
-										payload: { role: "assistant", content: accumulated },
-									});
-								}
-							});
-
-							// Update ThreadService and refresh atom to trigger re-render
-							sharedRuntime
-								.runPromise(updateProgram)
-								.then(() => {
-									refreshThreadState();
-								})
-								.catch((err) => {
-									console.error(
-										"Failed to update state during streaming:",
-										err,
-									);
-								});
-						},
-					});
-				});
-
-				const result = await sharedRuntime.runPromise(
-					streamProgram.pipe(
-						Effect.catchAll((error) => {
-							// If ChatRuntime fails to initialize (no API key), provide a clearer error
-							const errorMessage =
-								error instanceof Error ? error.message : String(error);
-							if (errorMessage.includes("API key")) {
-								return Effect.fail(
-									new Error(
-										"No API key configured. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file and restart the dev server.",
-									),
+				if (useMultiModel && modelIds) {
+					// Multi-model mode
+					// Get model configs for selected models
+					const getModelConfigsProgram = Effect.gen(function* () {
+						const modelConfigService = yield* ModelConfigService;
+						const availableModels = yield* modelConfigService.getAvailableModels();
+						
+						// Filter to selected models and create configs
+						const configs = [];
+						for (const modelId of modelIds) {
+							const model = availableModels.find((m) => m.modelId === modelId);
+							if (model) {
+								const config = yield* modelConfigService.getModelConfig(
+									model.modelId,
+									model.provider,
 								);
+								configs.push({
+									modelId: config.modelId,
+									provider: config.provider,
+								});
 							}
-							return Effect.fail(
-								error instanceof Error ? error : new Error(errorMessage),
-							);
-						}),
-					),
-				);
+						}
+						return configs;
+					});
 
-				console.log(
-					`Stream completed. Total chunks: ${result.chunkCount}, Duration: ${result.durationMs}ms`,
-				);
+					const modelConfigs = await sharedRuntime.runPromise(
+						getModelConfigsProgram.pipe(
+							Effect.provide(ModelConfigService.Default()),
+						),
+					);
 
-				// Final sync to ThreadService - ensure the last message matches final content
-				// The onChunk handler should have already updated it, but this ensures consistency
-				const finalSyncProgram = Effect.gen(function* () {
-					const threadService = yield* ThreadService;
-					const threadState = yield* threadService.getState();
-					const lastThreadMessage =
-						threadState.messages[threadState.messages.length - 1];
-
-					// Only update if the last message is different from the final result
-					// This prevents creating duplicates if the streaming already completed correctly
-					if (
-						lastThreadMessage?.role === "assistant" &&
-						lastThreadMessage.content !== result.content
-					) {
-						// Update the last assistant message to match final content
-						yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
-						yield* threadService.send({
-							type: "ADD_MESSAGE",
-							payload: { role: "assistant", content: result.content },
-						});
+					if (modelConfigs.length === 0) {
+						throw new Error("No valid model configurations found");
 					}
-					// If last message is not assistant or content matches, no update needed
-				});
 
-				await sharedRuntime.runPromise(finalSyncProgram);
+					// Initialize loading models state
+					setLoadingModels(modelConfigs.map((c) => c.modelId));
+
+					// Use MultiModelStreamingService
+					const multiModelProgram = Effect.gen(function* () {
+						const multiModelService = yield* MultiModelStreamingService;
+
+						return yield* multiModelService.streamMultipleModels({
+							messages: currentMessages,
+							modelConfigs,
+							onModelStart: (modelId) => {
+								// Model started - ensure it's in loading list
+								setLoadingModels((prev) => {
+									if (!prev.includes(modelId)) {
+										return [...prev, modelId];
+									}
+									return prev;
+								});
+							},
+							onChunk: (modelId, chunk, accumulated) => {
+								// Only update if we have accumulated content
+								if (!accumulated || accumulated.length === 0) {
+									return;
+								}
+
+								console.log(`onChunk for ${modelId}: chunk length=${chunk.length}, accumulated length=${accumulated.length}`);
+
+								// Update ThreadService for this specific model
+								const updateProgram = Effect.gen(function* () {
+									const threadService = yield* ThreadService;
+									const threadState = yield* threadService.getState();
+									
+									// Find existing message for this model
+									const existingMessageIndex = threadState.messages.findIndex(
+										(m) =>
+											m.role === "assistant" &&
+											m.metadata &&
+											typeof m.metadata === "object" &&
+											(m.metadata as Record<string, unknown>).modelId === modelId,
+									);
+
+									const modelConfig = modelConfigs.find(
+										(c) => c.modelId === modelId,
+									);
+									const metadata = modelConfig
+										? {
+												modelId: modelConfig.modelId,
+												modelProvider: modelConfig.provider,
+											}
+										: undefined;
+
+									if (existingMessageIndex >= 0) {
+										// Update existing message - use a more efficient approach
+										const existingMessage = threadState.messages[existingMessageIndex]!;
+										// Only update if content actually changed
+										if (existingMessage.content !== accumulated) {
+											const messagesBefore = threadState.messages.slice(
+												0,
+												existingMessageIndex,
+											);
+											const messagesAfter = threadState.messages.slice(
+												existingMessageIndex + 1,
+											);
+											
+											// Clear all and rebuild
+											yield* threadService.send({ type: "CLEAR_MESSAGES" });
+											for (const msg of messagesBefore) {
+												yield* threadService.send({
+													type: "ADD_MESSAGE",
+													payload: {
+														role: msg.role,
+														content: msg.content,
+														metadata: msg.metadata as Record<string, unknown> | undefined,
+													},
+												});
+											}
+											// Add updated message
+											yield* threadService.send({
+												type: "ADD_MESSAGE",
+												payload: {
+													role: "assistant",
+													content: accumulated,
+													metadata,
+												},
+											});
+											// Add remaining messages
+											for (const msg of messagesAfter) {
+												yield* threadService.send({
+													type: "ADD_MESSAGE",
+													payload: {
+														role: msg.role,
+														content: msg.content,
+														metadata: msg.metadata as Record<string, unknown> | undefined,
+													},
+												});
+											}
+										}
+									} else {
+										// Add new message for this model
+										yield* threadService.send({
+											type: "ADD_MESSAGE",
+											payload: {
+												role: "assistant",
+												content: accumulated,
+												metadata,
+											},
+										});
+									}
+								});
+
+								sharedRuntime
+									.runPromise(updateProgram)
+									.then(() => {
+										refreshThreadState();
+									})
+									.catch((err) => {
+										console.error(
+											"Failed to update state during multi-model streaming:",
+											err,
+										);
+									});
+							},
+							onModelComplete: (result) => {
+								console.log(
+									`Model ${result.modelId} completed: ${result.success ? "success" : "failed"}`,
+									result.content ? `Content length: ${result.content.length}` : `Error: ${result.error}`,
+								);
+								console.log(`Model ${result.modelId} content preview:`, result.content?.substring(0, 100));
+								
+								// Always save a message for every model, even if it failed
+								// Use error message as content if no content was generated
+								const messageContent = result.content && result.content.trim().length > 0
+									? result.content
+									: result.error
+										? `Error: ${result.error}`
+										: "No response generated";
+								
+								console.log(`Saving message for model ${result.modelId} with content length: ${messageContent.length}`);
+								
+								const finalUpdateProgram = Effect.gen(function* () {
+									const threadService = yield* ThreadService;
+									const threadState = yield* threadService.getState();
+									
+									// Find existing message for this model
+									const existingMessageIndex = threadState.messages.findIndex(
+										(m) =>
+											m.role === "assistant" &&
+											m.metadata &&
+											typeof m.metadata === "object" &&
+											(m.metadata as Record<string, unknown>).modelId === result.modelId,
+									);
+
+									const modelConfig = modelConfigs.find(
+										(c) => c.modelId === result.modelId,
+									);
+									const metadata = modelConfig
+										? {
+												modelId: modelConfig.modelId,
+												modelProvider: modelConfig.provider,
+												metrics: result.metrics,
+											}
+										: undefined;
+
+									console.log(`Found existing message at index ${existingMessageIndex} for model ${result.modelId}`);
+
+									if (existingMessageIndex >= 0) {
+										// Update existing message with final content and metrics
+										// Always update in onModelComplete to ensure metrics are added
+										const existingMessage = threadState.messages[existingMessageIndex]!;
+										console.log(`Existing message content length: ${existingMessage.content.length}, new content length: ${messageContent.length}`);
+										
+										const messagesBefore = threadState.messages.slice(0, existingMessageIndex);
+										const messagesAfter = threadState.messages.slice(existingMessageIndex + 1);
+										
+										console.log(`Updating message with metrics: ${messagesBefore.length} before, ${messagesAfter.length} after`);
+										
+										yield* threadService.send({ type: "CLEAR_MESSAGES" });
+										for (const msg of messagesBefore) {
+											yield* threadService.send({
+												type: "ADD_MESSAGE",
+												payload: {
+													role: msg.role,
+													content: msg.content,
+													metadata: msg.metadata as Record<string, unknown> | undefined,
+												},
+											});
+										}
+										// Always update with metrics in onModelComplete
+										yield* threadService.send({
+											type: "ADD_MESSAGE",
+											payload: {
+												role: "assistant",
+												content: messageContent,
+												metadata: metadata as Record<string, unknown> | undefined,
+											},
+										});
+										for (const msg of messagesAfter) {
+											yield* threadService.send({
+												type: "ADD_MESSAGE",
+												payload: {
+													role: msg.role,
+													content: msg.content,
+													metadata: msg.metadata as Record<string, unknown> | undefined,
+												},
+											});
+										}
+									} else {
+										// Add new message if it doesn't exist
+										console.log(`No existing message found, creating new one`);
+										yield* threadService.send({
+											type: "ADD_MESSAGE",
+											payload: {
+												role: "assistant",
+												content: messageContent,
+												metadata: metadata as Record<string, unknown> | undefined,
+											},
+										});
+									}
+								});
+
+								sharedRuntime
+									.runPromise(finalUpdateProgram)
+									.then(() => {
+										console.log(`Final message saved for model ${result.modelId}`);
+										refreshThreadState();
+									})
+									.catch((err) => {
+										console.error("Failed to save final message:", err);
+									});
+								
+								// Remove from loading list
+								setLoadingModels((prev) => prev.filter((id) => id !== result.modelId));
+							},
+							onError: (modelId, error) => {
+								console.error(`Error for model ${modelId}:`, error);
+								// Remove from loading list on error
+								setLoadingModels((prev) => prev.filter((id) => id !== modelId));
+							},
+						});
+					});
+
+					const results = await sharedRuntime.runPromise(
+						multiModelProgram.pipe(
+							Effect.provide(MultiModelStreamingService.Default()),
+							Effect.catchAll((error) => {
+								const errorMessage =
+									error instanceof Error ? error.message : String(error);
+								return Effect.fail(new Error(errorMessage));
+							}),
+						),
+					);
+
+					console.log(
+						`Multi-model stream completed. ${results.length} models processed.`,
+					);
+				} else {
+					// Single model mode (existing behavior)
+					// Create assistant message placeholder before streaming starts
+					await sendToThreadService({
+						type: "ADD_MESSAGE",
+						payload: { role: "assistant", content: "" },
+					});
+
+					// Use StreamingService to handle the streaming
+					const streamProgram = Effect.gen(function* () {
+						const streaming = yield* StreamingService;
+
+						return yield* streaming.streamChat({
+							messages: currentMessages,
+							onChunk: (chunk, accumulated) => {
+								// Update ThreadService during streaming for incremental updates
+								const updateProgram = Effect.gen(function* () {
+									const threadService = yield* ThreadService;
+									const currentState = yield* threadService.getState();
+									const lastMessage =
+										currentState.messages[currentState.messages.length - 1];
+
+									// Always update the last message if it's an assistant message
+									if (lastMessage?.role === "assistant") {
+										// Remove the last assistant message and add updated one
+										yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
+										yield* threadService.send({
+											type: "ADD_MESSAGE",
+											payload: { role: "assistant", content: accumulated },
+										});
+									} else {
+										// Fallback: add new assistant message if last isn't assistant
+										yield* threadService.send({
+											type: "ADD_MESSAGE",
+											payload: { role: "assistant", content: accumulated },
+										});
+									}
+								});
+
+								// Update ThreadService and refresh atom to trigger re-render
+								sharedRuntime
+									.runPromise(updateProgram)
+									.then(() => {
+										refreshThreadState();
+									})
+									.catch((err) => {
+										console.error(
+											"Failed to update state during streaming:",
+											err,
+										);
+									});
+							},
+						});
+					});
+
+					const result = await sharedRuntime.runPromise(
+						streamProgram.pipe(
+							Effect.catchAll((error) => {
+								const errorMessage =
+									error instanceof Error ? error.message : String(error);
+								if (errorMessage.includes("API key")) {
+									return Effect.fail(
+										new Error(
+											"No API key configured. Please set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in your .env.local file and restart the dev server.",
+										),
+									);
+								}
+								return Effect.fail(
+									error instanceof Error ? error : new Error(errorMessage),
+								);
+							}),
+						),
+					);
+
+					console.log(
+						`Stream completed. Total chunks: ${result.chunkCount}, Duration: ${result.durationMs}ms`,
+					);
+
+					// Final sync to ThreadService
+					const finalSyncProgram = Effect.gen(function* () {
+						const threadService = yield* ThreadService;
+						const threadState = yield* threadService.getState();
+						const lastThreadMessage =
+							threadState.messages[threadState.messages.length - 1];
+
+						if (
+							lastThreadMessage?.role === "assistant" &&
+							lastThreadMessage.content !== result.content
+						) {
+							yield* threadService.send({ type: "RETRY_LAST_MESSAGE" });
+							yield* threadService.send({
+								type: "ADD_MESSAGE",
+								payload: { role: "assistant", content: result.content },
+							});
+						}
+					});
+
+					await sharedRuntime.runPromise(finalSyncProgram);
+				}
+
 				// Refresh atom to ensure final state is reflected
 				refreshThreadState();
 			} catch (err) {
@@ -257,6 +551,8 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 			} finally {
 				// Always clear loading state in ThreadService (atom will auto-refresh)
 				await sendToThreadService({ type: "SET_LOADING", payload: false });
+				// Clear per-model loading state
+				setLoadingModels([]);
 			}
 		},
 		[sendToThreadService, refreshThreadState],
@@ -266,6 +562,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 		state,
 		messages: state.messages,
 		isLoading: state.isLoading,
+		loadingModels,
 		error: state.error ?? null,
 		addMessage,
 		clearMessages,

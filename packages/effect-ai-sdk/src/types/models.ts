@@ -32,21 +32,21 @@
  *
  * Latest Release: December 2024
  * - gpt-4o: Latest GPT-4 Omni model with vision, reasoning, and tool calling
- * - gpt-5o: Latest GPT-5 Omni model (new in v5.0.117)
+ * - gpt-4o-mini: Smaller, faster GPT-4o model for cost-sensitive applications
  * - gpt-4-turbo: Previous generation turbo model with 128k context
  * - gpt-4: Original GPT-4 model
  * - gpt-3.5-turbo: Legacy fast model for cost-sensitive applications
  *
  * Token Limits:
- * - gpt-5o: 128K input, 4K output
- * - gpt-4o: 128K input, 4K output
+ * - gpt-4o: 128K input, 16K output
+ * - gpt-4o-mini: 128K input, 16K output
  * - gpt-4-turbo: 128K input, 4K output
  * - gpt-4: 8K input, 8K output
  * - gpt-3.5-turbo: 16K input, 4K output
  */
 export type OpenAIModel =
-  | "gpt-5o"
   | "gpt-4o"
+  | "gpt-4o-mini"
   | "gpt-4-turbo"
   | "gpt-4"
   | "gpt-3.5-turbo";
@@ -412,7 +412,7 @@ export interface ProviderModelMap {
 export const PROVIDER_MODELS: Readonly<
   Record<SupportedProvider, readonly string[]>
 > = {
-  openai: ["gpt-5o", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
   anthropic: [
     "claude-3-5-sonnet-20241022",
     "claude-3-opus-20240229",
