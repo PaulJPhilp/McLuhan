@@ -67,8 +67,13 @@ export function createProvider(
           });
 
         case "google":
-          // Google provider uses a different pattern
-          return google;
+          // Google provider needs API key passed when creating models
+          // Return a wrapper that includes the API key
+          return {
+            _isGoogleProvider: true,
+            _apiKey: config.apiKey,
+            _provider: google,
+          };
 
         case "groq":
           return createGroq({
@@ -135,6 +140,52 @@ export function getLanguageModel(
 ): Effect.Effect<any, AiSdkProviderError> {
   return Effect.gen(function* () {
     try {
+      // Handle Google provider wrapper with API key
+      if (provider._isGoogleProvider) {
+        // Validate Google provider wrapper structure
+        if (!provider._apiKey) {
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Google provider wrapper missing API key for model ${modelId}`,
+              provider: "google",
+            })
+          );
+        }
+        if (!provider._provider) {
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Google provider wrapper missing provider instance for model ${modelId}`,
+              provider: "google",
+            })
+          );
+        }
+
+        // Google provider uses languageModel method with API key in options
+        try {
+          console.log(`[Google] Creating model ${modelId} with API key length: ${provider._apiKey.length}`);
+          const model = provider._provider.languageModel(modelId, { apiKey: provider._apiKey });
+          console.log(`[Google] Model ${modelId} created successfully`);
+          return model;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          console.error(`[Google] Failed to create model ${modelId}:`, errorMessage);
+          if (errorStack) {
+            console.error(`[Google] Error stack:`, errorStack);
+          }
+          if (error instanceof Error && error.name) {
+            console.error(`[Google] Error name:`, error.name);
+          }
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Failed to create Google model ${modelId}: ${errorMessage}`,
+              provider: "google",
+              cause: error,
+            })
+          );
+        }
+      }
+
       // Most providers use the function call pattern
       if (typeof provider === "function") {
         return provider(modelId);

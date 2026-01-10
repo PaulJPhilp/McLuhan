@@ -1,7 +1,7 @@
 {
-	"name": "@mcluhan/chat",
+	"name": "@effecttalk/chat",
 	"version": "0.1.0",
-	"description": "Effect-native chat UI inspired by assistant-ui, with Hume AI integration",
+	"description": "EffectTalk - Effect-native chat UI inspired by assistant-ui, with Hume AI integration",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
@@ -25,10 +25,14 @@
 		"effect": "^3.19.14",
 		"effect-actor": "workspace:*",
 		"effect-ai-sdk": "workspace:*",
+		"effect-artifact": "*",
 		"effect-env": "file:../../../Hume/packages/effect-env",
 		"hume": "^0.7.2",
+		"mermaid": "^10.9.0",
+		"prism-react-renderer": "^2.3.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
+		"react-json-tree": "^0.18.0",
 		"react-markdown": "^9.1.0"
 	},
 	"devDependencies": {

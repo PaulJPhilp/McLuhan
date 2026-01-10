@@ -304,20 +304,27 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 							},
 							onModelComplete: (result) => {
 								console.log(
-									`Model ${result.modelId} completed: ${result.success ? "success" : "failed"}`,
-									result.content ? `Content length: ${result.content.length}` : `Error: ${result.error}`,
+									`[${result.provider}] Model ${result.modelId} completed: ${result.success ? "success" : "failed"}`,
+									result.content ? `Content length: ${result.content.length}` : `Error: ${result.error || "No error message"}`,
 								);
-								console.log(`Model ${result.modelId} content preview:`, result.content?.substring(0, 100));
+								console.log(`[${result.provider}] Model ${result.modelId} result:`, {
+									success: result.success,
+									error: result.error,
+									contentLength: result.content?.length || 0,
+									contentPreview: result.content?.substring(0, 100),
+									durationMs: result.durationMs,
+									chunkCount: result.chunkCount,
+								});
 								
 								// Always save a message for every model, even if it failed
 								// Use error message as content if no content was generated
 								const messageContent = result.content && result.content.trim().length > 0
 									? result.content
 									: result.error
-										? `Error: ${result.error}`
+										? result.error // Store error message directly (will be displayed in error box)
 										: "No response generated";
 								
-								console.log(`Saving message for model ${result.modelId} with content length: ${messageContent.length}`);
+								console.log(`[${result.provider}] Saving message for model ${result.modelId} with content length: ${messageContent.length}, success: ${result.success}, error: ${result.error || "none"}`);
 								
 								const finalUpdateProgram = Effect.gen(function* () {
 									const threadService = yield* ThreadService;
@@ -340,10 +347,20 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 												modelId: modelConfig.modelId,
 												modelProvider: modelConfig.provider,
 												metrics: result.metrics,
+												...(result.error ? { error: result.error } : {}),
+												success: result.success,
 											}
 										: undefined;
 
-									console.log(`Found existing message at index ${existingMessageIndex} for model ${result.modelId}`);
+									console.log(`[${result.provider}] Found existing message at index ${existingMessageIndex} for model ${result.modelId}`);
+									console.log(`[${result.provider}] Metadata being stored:`, {
+										modelId: metadata?.modelId,
+										modelProvider: metadata?.modelProvider,
+										hasError: !!metadata?.error,
+										error: metadata?.error,
+										success: metadata?.success,
+										hasMetrics: !!metadata?.metrics,
+									});
 
 									if (existingMessageIndex >= 0) {
 										// Update existing message with final content and metrics
@@ -403,11 +420,11 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 								sharedRuntime
 									.runPromise(finalUpdateProgram)
 									.then(() => {
-										console.log(`Final message saved for model ${result.modelId}`);
+										console.log(`[${result.provider}] Final message saved for model ${result.modelId} with success=${result.success}, error=${result.error || "none"}`);
 										refreshThreadState();
 									})
 									.catch((err) => {
-										console.error("Failed to save final message:", err);
+										console.error(`[${result.provider}] Failed to save final message for model ${result.modelId}:`, err);
 									});
 								
 								// Remove from loading list
@@ -443,12 +460,24 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 						payload: { role: "assistant", content: "" },
 					});
 
+					// Get the message ID of the newly added assistant message
+					const getLastMessageIdProgram = Effect.gen(function* () {
+						const threadService = yield* ThreadService;
+						const threadState = yield* threadService.getState();
+						return threadState.messages[threadState.messages.length - 1]?.id;
+					});
+
+					const assistantMessageId = await sharedRuntime.runPromise(
+						getLastMessageIdProgram,
+					);
+
 					// Use StreamingService to handle the streaming
 					const streamProgram = Effect.gen(function* () {
 						const streaming = yield* StreamingService;
 
 						return yield* streaming.streamChat({
 							messages: currentMessages,
+							messageId: assistantMessageId,
 							onChunk: (chunk, accumulated) => {
 								// Update ThreadService during streaming for incremental updates
 								const updateProgram = Effect.gen(function* () {

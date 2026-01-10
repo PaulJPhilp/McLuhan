@@ -1,8 +1,8 @@
 {
-  "name": "mcluhan",
+  "name": "effecttalk",
   "version": "0.0.0",
   "private": true,
-  "description": "McLuhan monorepo: Effect-native packages for AI agent infrastructure",
+  "description": "EffectTalk monorepo: Effect-native packages for AI agent infrastructure",
   "type": "module",
   "packageManager": "bun@1.1.33",
   "workspaces": [
@@ -28,7 +28,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.2",
+    "@ai-sdk/openai": "^3.0.7",
     "effect-json": "^0.2.0"
   }
 }

@@ -31,6 +31,9 @@ export interface StreamState {
  */
 export interface StreamChatOptions {
 	readonly messages: readonly Message[];
+	readonly messageId?: string;
+	readonly modelProvider?: string;
+	readonly modelId?: string;
 	readonly onChunk?: OnChunkCallback;
 	readonly onComplete?: OnCompleteCallback;
 	readonly onError?: OnErrorCallback;

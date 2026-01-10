@@ -129,10 +129,41 @@ function streamSingleModel(
 		const systemPrompt = envValues.VITE_SYSTEM_PROMPT;
 
 		// Create model instance
+		const apiKey = getApiKeyForProvider(modelConfig.provider);
 		const model = yield* createModelForProvider(
 			modelConfig.provider,
 			modelConfig.modelId,
+		).pipe(
+			Effect.tapError((error) =>
+				Effect.sync(() => {
+					console.error(
+						`[${modelConfig.provider}] Failed to create model ${modelConfig.modelId}:`,
+						error,
+					);
+					if (error instanceof Error) {
+						console.error(`[${modelConfig.provider}] Error stack:`, error.stack);
+						console.error(`[${modelConfig.provider}] Error name:`, error.name);
+					}
+					console.error(
+						`[${modelConfig.provider}] API key present:`,
+						apiKey ? "Yes" : "No",
+					);
+					if (modelConfig.provider === "google") {
+						console.error(
+							`[google] API key length:`,
+							apiKey ? apiKey.length : 0,
+						);
+						console.error(
+							`[google] API key prefix:`,
+							apiKey ? apiKey.substring(0, 10) + "..." : "N/A",
+						);
+					}
+				}),
+			),
 		);
+
+		// Track whether an error occurred during streaming
+		let streamErrorOccurred = false;
 
 		// Stream with timeout - wrap entire operation in Effect.tryPromise
 		const streamResult = yield* Effect.tryPromise({
@@ -244,17 +275,33 @@ function streamSingleModel(
 		}).pipe(
 			Effect.catchAll((error) => {
 				// Handle error - mark as failed and return empty result
+				streamErrorOccurred = true;
 				success = false;
 				errorMessage = error instanceof Error ? error.message : String(error);
+				console.error(
+					`Stream error for ${modelConfig.modelId} (${modelConfig.provider}):`,
+					error,
+				);
+				// Log full error details for debugging
+				if (error instanceof Error) {
+					console.error(`Error stack:`, error.stack);
+					console.error(`Error name:`, error.name);
+				}
 				return Effect.succeed({ content: "", chunkCount: 0 });
 			}),
 		);
 
-		// Update variables from stream result (only if stream succeeded)
-		if (streamResult && streamResult.content) {
+		// Update variables from stream result (only if stream succeeded and no error occurred)
+		if (!streamErrorOccurred && streamResult && streamResult.content) {
 			accumulatedContent = streamResult.content;
 			chunkCount = streamResult.chunkCount;
-			success = true; // Mark as successful if we got content
+			success = true; // Mark as successful if we got content and no error occurred
+		} else if (!streamErrorOccurred && streamResult) {
+			// Even if content is empty, if no error occurred, mark as success
+			// (some models might return empty content legitimately)
+			accumulatedContent = streamResult.content || "";
+			chunkCount = streamResult.chunkCount;
+			success = true;
 		}
 
 		const durationMs = Date.now() - startTime;

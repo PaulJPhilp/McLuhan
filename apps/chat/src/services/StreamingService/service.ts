@@ -1,5 +1,7 @@
 import { Effect } from "effect";
 import { ChatRuntime } from "../ChatRuntime/index.js";
+import { ArtifactExtractionService } from "../ArtifactExtractionService/index.js";
+import { ArtifactStorageService } from "../ArtifactStorageService/index.js";
 import type { StreamingServiceApi } from "./api.js";
 import {
 	EmptyStreamError,
@@ -18,14 +20,19 @@ export class StreamingService extends Effect.Service<StreamingService>()(
 	"chat/StreamingService",
 	{
 		effect: Effect.fn(function* () {
-			// Get ChatRuntime dependency at service construction time
+			// Get dependencies at service construction time
 			const chatRuntime = yield* ChatRuntime;
+			const artifactExtraction = yield* ArtifactExtractionService;
+			const artifactStorage = yield* ArtifactStorageService;
 
 			return {
 				streamChat: (options: StreamChatOptions) =>
 					Effect.gen(function* () {
 						const {
 							messages,
+							messageId,
+							modelProvider,
+							modelId,
 							onChunk,
 							onComplete,
 							onError,
@@ -148,6 +155,32 @@ export class StreamingService extends Effect.Service<StreamingService>()(
 
 						const durationMs = Date.now() - startTime;
 
+						// Extract and store artifacts if messageId is provided
+						if (messageId && content.length > 0) {
+							yield* Effect.gen(function* () {
+								try {
+									const artifacts = yield* artifactExtraction.extractFromContent(
+										content,
+										modelProvider,
+										modelId,
+									);
+
+									if (artifacts.length > 0) {
+										yield* artifactStorage.saveArtifacts(messageId, artifacts);
+										console.log(
+											`Extracted and stored ${artifacts.length} artifacts for message ${messageId}`,
+										);
+									}
+								} catch (error) {
+									// Log but don't fail - artifact extraction shouldn't break streaming
+									console.warn(
+										"Failed to extract or store artifacts:",
+										error instanceof Error ? error.message : String(error),
+									);
+								}
+							});
+						}
+
 						// Call onComplete callback if provided
 						if (onComplete) {
 							onComplete(content);
@@ -163,6 +196,10 @@ export class StreamingService extends Effect.Service<StreamingService>()(
 					}),
 			} satisfies StreamingServiceApi;
 		}),
-		dependencies: [ChatRuntime.Default()],
+		dependencies: [
+			ChatRuntime.Default(),
+			ArtifactExtractionService.Default(),
+			ArtifactStorageService.Default(),
+		],
 	},
 ) {}

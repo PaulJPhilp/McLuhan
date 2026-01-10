@@ -79,11 +79,25 @@ export class ModelConfigService extends Effect.Service<ModelConfigService>()(
 				getAvailableModels: () =>
 					Effect.sync(() => {
 						const models: ModelInfo[] = [];
+						// Exclude these providers from the model picker
+						const excludedProviders: Set<SupportedProvider> = new Set([
+							"anthropic",
+							"xai",
+							"groq",
+							"deepseek",
+							"perplexity",
+							"qwen",
+						]);
 
 						// Iterate through all providers and their models
 						for (const [provider, modelIds] of Object.entries(
 							PROVIDER_MODELS,
 						) as [SupportedProvider, readonly string[]][]) {
+							// Skip excluded providers
+							if (excludedProviders.has(provider)) {
+								continue;
+							}
+
 							const hasApiKey = hasApiKeyForProvider(provider);
 
 							for (const modelId of modelIds) {

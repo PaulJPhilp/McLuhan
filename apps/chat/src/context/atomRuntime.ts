@@ -1,5 +1,7 @@
 import { Atom } from "@effect-atom/atom-react";
 import { Layer, ManagedRuntime } from "effect";
+import { ArtifactExtractionService } from "../services/ArtifactExtractionService/index.js";
+import { ArtifactStorageService } from "../services/ArtifactStorageService/index.js";
 import { ChatRuntime } from "../services/ChatRuntime/index.js";
 import { HumeService } from "../services/HumeService/index.js";
 import { StreamingService } from "../services/StreamingService/index.js";
@@ -16,6 +18,8 @@ function getServiceLayer() {
 			ThreadService.Default(),
 			ChatRuntime.Default(),
 			HumeService.Default(),
+			ArtifactExtractionService.Default(),
+			ArtifactStorageService.Default(),
 			StreamingService.Default(),
 		);
 	}

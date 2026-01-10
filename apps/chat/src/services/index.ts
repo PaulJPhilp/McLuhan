@@ -150,3 +150,17 @@ export type {
 	MultiModelStreamOptions,
 } from "./MultiModelStreamingService/index.js";
 export type { ModelConfig as MultiModelStreamConfig } from "./MultiModelStreamingService/types.js";
+
+// ArtifactExtractionService
+export { ArtifactExtractionService } from "./ArtifactExtractionService/index.js";
+export type { ArtifactExtractionServiceSchema } from "./ArtifactExtractionService/index.js";
+
+// ArtifactStorageService
+export {
+	ArtifactStorageService,
+	ArtifactStorageError,
+} from "./ArtifactStorageService/index.js";
+export type {
+	ArtifactStorageServiceSchema,
+	StorageStats,
+} from "./ArtifactStorageService/index.js";

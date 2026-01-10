@@ -30,7 +30,10 @@
  * OpenAI language models
  * Visit: https://platform.openai.com/docs/models
  *
- * Latest Release: December 2024
+ * Latest Release: January 2025
+ * - gpt-5.2: Latest GPT-5 model with enhanced capabilities
+ * - gpt-5.1: GPT-5 model with improved performance
+ * - gpt-5.0: Initial GPT-5 release with advanced reasoning
  * - gpt-4o: Latest GPT-4 Omni model with vision, reasoning, and tool calling
  * - gpt-4o-mini: Smaller, faster GPT-4o model for cost-sensitive applications
  * - gpt-4-turbo: Previous generation turbo model with 128k context
@@ -38,6 +41,7 @@
  * - gpt-3.5-turbo: Legacy fast model for cost-sensitive applications
  *
  * Token Limits:
+ * - gpt-5.x: 128K input, 16K output (estimated)
  * - gpt-4o: 128K input, 16K output
  * - gpt-4o-mini: 128K input, 16K output
  * - gpt-4-turbo: 128K input, 4K output
@@ -45,6 +49,9 @@
  * - gpt-3.5-turbo: 16K input, 4K output
  */
 export type OpenAIModel =
+  | "gpt-5.2"
+  | "gpt-5.1"
+  | "gpt-5.0"
   | "gpt-4o"
   | "gpt-4o-mini"
   | "gpt-4-turbo"
@@ -94,23 +101,26 @@ export type AnthropicModel =
 
 /**
  * Google Gemini language models
- * Visit: https://ai.google.dev/gemini-2/docs/thinking-experimental
+ * Visit: https://ai.google.dev/gemini-api/docs/models/gemini
  *
- * Latest Release: December 2024
- * - gemini-2.0-flash: Latest Flash model with multimodal support
- * - gemini-1.5-pro: High-capability reasoning model
- * - gemini-1.5-flash: Fast execution model
+ * Latest Release: January 2025
+ * - gemini-3-pro: State-of-the-art model with superior reasoning and multimodal capabilities
+ * - gemini-3-flash: Cost-effective model with near-Pro capabilities, optimized for speed
+ * - gemini-2.5-pro: Advanced reasoning model with enhanced coding capabilities
+ * - gemini-2.5-flash: Optimized for speed and efficiency, suitable for high-volume tasks
+ * - gemini-2.0-flash: Stable Flash model with multimodal support
  *
  * Token Limits:
- * - gemini-2.0-flash: 1M input, 16K output
- * - gemini-1.5-pro: 1M input, 8K output
- * - gemini-1.5-flash: 1M input, 8K output
+ * - gemini-3-*: 1M input, 8K output
+ * - gemini-2.5-*: 1M input, 8K output
+ * - gemini-2.0-flash: 1M input, 8K output
  */
 export type GoogleModel =
-  | "gemini-2.0-flash"
-  | "gemini-1.5-pro"
-  | "gemini-1.5-flash"
-  | "gemini-1.0-pro";
+  | "gemini-3-pro"
+  | "gemini-3-flash"
+  | "gemini-2.5-pro"
+  | "gemini-2.5-flash"
+  | "gemini-2.0-flash";
 
 /**
  * Google embedding models
@@ -412,7 +422,16 @@ export interface ProviderModelMap {
 export const PROVIDER_MODELS: Readonly<
   Record<SupportedProvider, readonly string[]>
 > = {
-  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+  openai: [
+    "gpt-5.2",
+    "gpt-5.1",
+    "gpt-5.0",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+  ],
   anthropic: [
     "claude-3-5-sonnet-20241022",
     "claude-3-opus-20240229",
@@ -420,10 +439,11 @@ export const PROVIDER_MODELS: Readonly<
     "claude-3-haiku-20240307",
   ],
   google: [
+    "gemini-3-pro",
+    "gemini-3-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemini-1.5-pro",
-    "gemini-1.5-flash",
-    "gemini-1.0-pro",
   ],
   groq: ["mixtral-8x7b-32768", "llama2-70b-4096", "gemma-7b-it"],
   deepseek: ["deepseek-coder", "deepseek-chat"],

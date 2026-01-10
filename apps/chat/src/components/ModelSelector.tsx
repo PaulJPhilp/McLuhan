@@ -34,9 +34,8 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 						Effect.provide(ModelConfigService.Default()),
 					),
 				);
-				// Filter to only show models with API keys
-				const available = models.filter((m) => m.hasApiKey);
-				setAvailableModels(available);
+				// Show all models, but indicate which ones need API keys
+				setAvailableModels(models);
 			} catch (error) {
 				console.error("Failed to load models:", error);
 			} finally {
@@ -77,7 +76,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 	if (availableModels.length === 0) {
 		return (
 			<div className="mb-2 text-xs text-gray-500">
-				No models available. Configure API keys in .env.local
+				No models available. Check your configuration.
 			</div>
 		);
 	}
@@ -108,15 +107,21 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 								{models.map((model) => {
 									const isSelected = selectedModels.includes(model.modelId);
 									const modelColor = getModelColor(model.modelId);
+									const isDisabled = !model.hasApiKey;
 
 									return (
 										<label
 											key={model.modelId}
-											className="flex items-center gap-2 p-1 hover:bg-gray-100 rounded cursor-pointer text-xs"
+											className={`flex items-center gap-2 p-1 rounded text-xs ${
+												isDisabled
+													? "opacity-50 cursor-not-allowed"
+													: "hover:bg-gray-100 cursor-pointer"
+											}`}
 										>
 											<input
 												type="checkbox"
 												checked={isSelected}
+												disabled={isDisabled}
 												onChange={() => handleToggleModel(model.modelId)}
 												className="rounded border-gray-300"
 											/>
@@ -124,7 +129,14 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 												className="w-3 h-3 rounded border border-gray-300"
 												style={{ backgroundColor: modelColor.bg }}
 											/>
-											<span className="text-gray-700">{model.displayName}</span>
+											<span className={isDisabled ? "text-gray-400" : "text-gray-700"}>
+												{model.displayName}
+											</span>
+											{isDisabled && (
+												<span className="text-[10px] text-gray-400 ml-auto">
+													(API key needed)
+												</span>
+											)}
 										</label>
 									);
 								})}
