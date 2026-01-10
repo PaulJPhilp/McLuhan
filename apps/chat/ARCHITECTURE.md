@@ -98,23 +98,45 @@ streamResponse(messages) → AsyncIterable<string>
 
 ### ChatContext: React Integration
 
-Custom React context that bridges Effect services to components:
+Custom React context that bridges Effect services to components using `effect-atom`:
 
 ```typescript
 ChatProvider
   ↓
   Initializes ThreadService + HumeService layers
   ↓
-  ChatContext.Provider wraps app
+  Creates atomRuntime with service layer
+  ↓
+  threadStateAtom reads from ThreadService reactively
+  ↓
+  ChatContext.Provider wraps app (with RegistryProvider)
   ↓
   Components use useChatContext() hook
+  ↓
+  useAtomValue(threadStateAtom) for reactive state
+  ↓
+  useAtomRefresh() after mutations triggers re-renders
 ```
 
-**Why custom context?**
-- React components can't directly use Effect Context
-- ChatContext adapts Effect.Effect to React promises/state
-- Manages initialization lifecycle
-- Handles runtime configuration
+**State Management with effect-atom:**
+- **`threadStateAtom`**: Reactive atom that reads ThreadService state
+- **`useAtomValue`**: Hook to read atom value (triggers re-render on change)
+- **`useAtomRefresh`**: Hook to refresh atom after mutations
+- **Singleton Pattern**: ThreadService uses shared `Ref` for consistent state
+- **Automatic Reactivity**: No manual `setState()` or `syncState()` calls needed
+
+**Why effect-atom?**
+- Eliminates manual state synchronization
+- Automatic React re-renders when ThreadService state changes
+- Type-safe with Effect.js patterns
+- Reduces code complexity (~300 → ~250 lines)
+- Singleton pattern ensures state consistency across runtimes
+
+**Key Implementation Detail:**
+- Uses `atomRuntime.atom()` (NOT `.fn()`) for proper refresh behavior
+- `.atom()` creates a readable atom that computes on read
+- `.fn()` creates a function atom that requires invocation
+- `useAtomRefresh()` works correctly with `.atom()` but not `.fn()`
 
 ### PersistenceService: Storage Layer
 
@@ -160,19 +182,27 @@ getDetectedEmotions(sessionId) → [{ name, score }]
 ```
 1. Component calls sendMessage(text)
    ↓
-2. ChatContext adds user message to state
+2. ChatContext calls sendToThreadService(ADD_MESSAGE)
    ↓
-3. ChatContext calls ChatRuntime.streamResponse()
+3. ThreadService updates shared Ref (singleton pattern)
    ↓
-4. ChatRuntime creates effect-ai-sdk stream
+4. ChatContext calls refreshThreadState() (atom refresh)
    ↓
-5. Provider processes message through LLM
+5. Atom re-reads ThreadService state
    ↓
-6. Chunks stream back to component
+6. React re-renders with new state (automatic via useAtomValue)
    ↓
-7. Component adds assistant message on complete
+7. ChatContext calls ChatRuntime.streamResponse()
    ↓
-8. PersistenceService saves thread (optional)
+8. ChatRuntime creates effect-ai-sdk stream
+   ↓
+9. Provider processes message through LLM
+   ↓
+10. Chunks stream back, updating ThreadService + refreshing atom
+   ↓
+11. React automatically re-renders with streaming updates
+   ↓
+12. PersistenceService saves thread (optional)
 ```
 
 ### Retry message:

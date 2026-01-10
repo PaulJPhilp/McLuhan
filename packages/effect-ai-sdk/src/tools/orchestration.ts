@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { CoreMessage, LanguageModel } from "ai";
+import type { ModelMessage, LanguageModel } from "ai";
 import { generateText } from "ai";
 import {
   createAnthropicToolResultMessage,
@@ -25,7 +25,7 @@ import type {
  */
 export async function orchestrateTools(
   model: LanguageModel,
-  messages: CoreMessage[],
+  messages: ModelMessage[],
   tools: Tool[],
   options?: ToolCallingOptions
 ): Promise<ToolOrchestrationResult> {
@@ -33,7 +33,7 @@ export async function orchestrateTools(
   const toolTimeout = options?.toolTimeout ?? 30000;
   const continueOnError = options?.continueOnError ?? true;
 
-  const conversationMessages: CoreMessage[] = [...messages];
+  const conversationMessages: ModelMessage[] = [...messages];
   const allToolCalls: ToolCall[] = [];
   const allToolResults: ToolResult[] = [];
   let turnCount = 0;
@@ -115,7 +115,7 @@ export async function orchestrateTools(
             toolName: toolCall.toolName,
             args: toolCall.args,
             result: null,
-            error: validation.valid === false ? validation.error : undefined,
+            ...(validation.valid === false && validation.error ? { error: validation.error } : {}),
             isError: true,
           });
           continue;

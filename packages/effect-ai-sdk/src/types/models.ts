@@ -30,23 +30,30 @@
  * OpenAI language models
  * Visit: https://platform.openai.com/docs/models
  *
- * Latest Release: December 2024
+ * Latest Release: January 2025
+ * - gpt-5.2: Latest GPT-5 model with enhanced capabilities
+ * - gpt-5.1: GPT-5 model with improved performance
+ * - gpt-5.0: Initial GPT-5 release with advanced reasoning
  * - gpt-4o: Latest GPT-4 Omni model with vision, reasoning, and tool calling
- * - gpt-5o: Latest GPT-5 Omni model (new in v5.0.117)
+ * - gpt-4o-mini: Smaller, faster GPT-4o model for cost-sensitive applications
  * - gpt-4-turbo: Previous generation turbo model with 128k context
  * - gpt-4: Original GPT-4 model
  * - gpt-3.5-turbo: Legacy fast model for cost-sensitive applications
  *
  * Token Limits:
- * - gpt-5o: 128K input, 4K output
- * - gpt-4o: 128K input, 4K output
+ * - gpt-5.x: 128K input, 16K output (estimated)
+ * - gpt-4o: 128K input, 16K output
+ * - gpt-4o-mini: 128K input, 16K output
  * - gpt-4-turbo: 128K input, 4K output
  * - gpt-4: 8K input, 8K output
  * - gpt-3.5-turbo: 16K input, 4K output
  */
 export type OpenAIModel =
-  | "gpt-5o"
+  | "gpt-5.2"
+  | "gpt-5.1"
+  | "gpt-5.0"
   | "gpt-4o"
+  | "gpt-4o-mini"
   | "gpt-4-turbo"
   | "gpt-4"
   | "gpt-3.5-turbo";
@@ -55,7 +62,10 @@ export type OpenAIModel =
  * OpenAI embedding models
  * Visit: https://platform.openai.com/docs/guides/embeddings
  */
-export type OpenAIEmbeddingModel = "text-embedding-3-large" | "text-embedding-3-small" | "text-embedding-ada-002";
+export type OpenAIEmbeddingModel =
+  | "text-embedding-3-large"
+  | "text-embedding-3-small"
+  | "text-embedding-ada-002";
 
 /**
  * OpenAI image generation models
@@ -91,23 +101,26 @@ export type AnthropicModel =
 
 /**
  * Google Gemini language models
- * Visit: https://ai.google.dev/gemini-2/docs/thinking-experimental
+ * Visit: https://ai.google.dev/gemini-api/docs/models/gemini
  *
- * Latest Release: December 2024
- * - gemini-2.0-flash: Latest Flash model with multimodal support
- * - gemini-1.5-pro: High-capability reasoning model
- * - gemini-1.5-flash: Fast execution model
+ * Latest Release: January 2025
+ * - gemini-3-pro: State-of-the-art model with superior reasoning and multimodal capabilities
+ * - gemini-3-flash: Cost-effective model with near-Pro capabilities, optimized for speed
+ * - gemini-2.5-pro: Advanced reasoning model with enhanced coding capabilities
+ * - gemini-2.5-flash: Optimized for speed and efficiency, suitable for high-volume tasks
+ * - gemini-2.0-flash: Stable Flash model with multimodal support
  *
  * Token Limits:
- * - gemini-2.0-flash: 1M input, 16K output
- * - gemini-1.5-pro: 1M input, 8K output
- * - gemini-1.5-flash: 1M input, 8K output
+ * - gemini-3-*: 1M input, 8K output
+ * - gemini-2.5-*: 1M input, 8K output
+ * - gemini-2.0-flash: 1M input, 8K output
  */
 export type GoogleModel =
-  | "gemini-2.0-flash"
-  | "gemini-1.5-pro"
-  | "gemini-1.5-flash"
-  | "gemini-1.0-pro";
+  | "gemini-3-pro"
+  | "gemini-3-flash"
+  | "gemini-2.5-pro"
+  | "gemini-2.5-flash"
+  | "gemini-2.0-flash";
 
 /**
  * Google embedding models
@@ -124,7 +137,10 @@ export type GoogleEmbeddingModel = "text-embedding-004" | "embedding-001";
  * - llama2-70b-4096: Meta's Llama 2 70B parameter model
  * - gemma-7b-it: Google's lightweight instruction-tuned model
  */
-export type GroqModel = "mixtral-8x7b-32768" | "llama2-70b-4096" | "gemma-7b-it";
+export type GroqModel =
+  | "mixtral-8x7b-32768"
+  | "llama2-70b-4096"
+  | "gemma-7b-it";
 
 /**
  * DeepSeek language models (OpenAI-compatible)
@@ -203,7 +219,9 @@ export type SupportedLanguageModel =
 /**
  * Union type of all supported embedding models
  */
-export type SupportedEmbeddingModel = OpenAIEmbeddingModel | GoogleEmbeddingModel;
+export type SupportedEmbeddingModel =
+  | OpenAIEmbeddingModel
+  | GoogleEmbeddingModel;
 
 /**
  * Union type of all supported image generation models
@@ -268,7 +286,10 @@ export interface ProviderCapabilities {
 /**
  * Comprehensive provider capabilities matrix
  */
-export const PROVIDER_CAPABILITIES: Record<SupportedProvider, ProviderCapabilities> = {
+export const PROVIDER_CAPABILITIES: Record<
+  SupportedProvider,
+  ProviderCapabilities
+> = {
   openai: {
     languageModel: true,
     embedding: true,
@@ -398,18 +419,40 @@ export interface ProviderModelMap {
 /**
  * Mapping of all supported models by provider
  */
-export const PROVIDER_MODELS: Readonly<Record<SupportedProvider, readonly string[]>> = {
-  openai: ["gpt-5o", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+export const PROVIDER_MODELS: Readonly<
+  Record<SupportedProvider, readonly string[]>
+> = {
+  openai: [
+    "gpt-5.2",
+    "gpt-5.1",
+    "gpt-5.0",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+  ],
   anthropic: [
     "claude-3-5-sonnet-20241022",
     "claude-3-opus-20240229",
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307",
   ],
-  google: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
+  google: [
+    "gemini-3-pro",
+    "gemini-3-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ],
   groq: ["mixtral-8x7b-32768", "llama2-70b-4096", "gemma-7b-it"],
   deepseek: ["deepseek-coder", "deepseek-chat"],
-  perplexity: ["pplx-70b-online", "pplx-7b-online", "pplx-70b-chat", "pplx-7b-chat"],
+  perplexity: [
+    "pplx-70b-online",
+    "pplx-7b-online",
+    "pplx-70b-chat",
+    "pplx-7b-chat",
+  ],
   xai: ["grok-2", "grok-1"],
   qwen: ["qwen-turbo", "qwen-plus", "qwen-max"],
   gateway: [], // Gateway supports dynamic models
@@ -429,7 +472,10 @@ export const PROVIDER_MODELS: Readonly<Record<SupportedProvider, readonly string
  * const isUnsupported = isSupportedModel("openai", "claude-opus") // false
  * ```
  */
-export function isSupportedModel(provider: SupportedProvider, model: string): boolean {
+export function isSupportedModel(
+  provider: SupportedProvider,
+  model: string
+): boolean {
   const models = PROVIDER_MODELS[provider];
   // Gateway supports any model dynamically
   if (provider === "gateway") return true;
@@ -459,7 +505,9 @@ export const PROVIDER_ALIASES: Readonly<Record<string, SupportedProvider>> = {
  * Provider API base URLs
  * Default base URLs for each provider when not explicitly configured
  */
-export const PROVIDER_BASE_URLS: Readonly<Record<SupportedProvider, string | null>> = {
+export const PROVIDER_BASE_URLS: Readonly<
+  Record<SupportedProvider, string | null>
+> = {
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com",
   google: null, // Google uses different authentication
@@ -493,81 +541,82 @@ export interface ProviderAuthConfig {
 /**
  * Provider authentication configuration details
  */
-export const PROVIDER_AUTH_CONFIG: Readonly<Record<SupportedProvider, ProviderAuthConfig>> =
-  {
-    openai: {
-      apiKeyEnvVar: "OPENAI_API_KEY",
-      supportsOrganization: true,
-      supportsProject: true,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["OPENAI_API_KEY"],
-      optionalEnvVars: ["OPENAI_ORG_ID", "OPENAI_PROJECT_ID"],
-    },
-    anthropic: {
-      apiKeyEnvVar: "ANTHROPIC_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["ANTHROPIC_API_KEY"],
-      optionalEnvVars: [],
-    },
-    google: {
-      apiKeyEnvVar: "GOOGLE_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: false,
-      requiredEnvVars: ["GOOGLE_API_KEY"],
-      optionalEnvVars: [],
-    },
-    groq: {
-      apiKeyEnvVar: "GROQ_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["GROQ_API_KEY"],
-      optionalEnvVars: [],
-    },
-    deepseek: {
-      apiKeyEnvVar: "DEEPSEEK_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["DEEPSEEK_API_KEY"],
-      optionalEnvVars: [],
-    },
-    perplexity: {
-      apiKeyEnvVar: "PERPLEXITY_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["PERPLEXITY_API_KEY"],
-      optionalEnvVars: [],
-    },
-    xai: {
-      apiKeyEnvVar: "XAI_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["XAI_API_KEY"],
-      optionalEnvVars: [],
-    },
-    qwen: {
-      apiKeyEnvVar: "QWEN_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["QWEN_API_KEY"],
-      optionalEnvVars: [],
-    },
-    gateway: {
-      apiKeyEnvVar: "VERCEL_AI_GATEWAY_API_KEY",
-      supportsOrganization: false,
-      supportsProject: false,
-      supportsCustomBaseUrl: true,
-      requiredEnvVars: ["VERCEL_AI_GATEWAY_API_KEY"],
-      optionalEnvVars: [],
-    },
-  } as const;
+export const PROVIDER_AUTH_CONFIG: Readonly<
+  Record<SupportedProvider, ProviderAuthConfig>
+> = {
+  openai: {
+    apiKeyEnvVar: "OPENAI_API_KEY",
+    supportsOrganization: true,
+    supportsProject: true,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["OPENAI_API_KEY"],
+    optionalEnvVars: ["OPENAI_ORG_ID", "OPENAI_PROJECT_ID"],
+  },
+  anthropic: {
+    apiKeyEnvVar: "ANTHROPIC_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["ANTHROPIC_API_KEY"],
+    optionalEnvVars: [],
+  },
+  google: {
+    apiKeyEnvVar: "GOOGLE_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: false,
+    requiredEnvVars: ["GOOGLE_API_KEY"],
+    optionalEnvVars: [],
+  },
+  groq: {
+    apiKeyEnvVar: "GROQ_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["GROQ_API_KEY"],
+    optionalEnvVars: [],
+  },
+  deepseek: {
+    apiKeyEnvVar: "DEEPSEEK_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["DEEPSEEK_API_KEY"],
+    optionalEnvVars: [],
+  },
+  perplexity: {
+    apiKeyEnvVar: "PERPLEXITY_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["PERPLEXITY_API_KEY"],
+    optionalEnvVars: [],
+  },
+  xai: {
+    apiKeyEnvVar: "XAI_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["XAI_API_KEY"],
+    optionalEnvVars: [],
+  },
+  qwen: {
+    apiKeyEnvVar: "QWEN_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["QWEN_API_KEY"],
+    optionalEnvVars: [],
+  },
+  gateway: {
+    apiKeyEnvVar: "VERCEL_AI_GATEWAY_API_KEY",
+    supportsOrganization: false,
+    supportsProject: false,
+    supportsCustomBaseUrl: true,
+    requiredEnvVars: ["VERCEL_AI_GATEWAY_API_KEY"],
+    optionalEnvVars: [],
+  },
+} as const;
 
 /**
  * Provider feature comparison
@@ -585,7 +634,15 @@ export const PROVIDER_COMPARISON = {
   /** Providers with vision capabilities */
   withVision: ["openai", "anthropic", "google"] as const,
   /** Providers with tool calling support */
-  withToolCalling: ["openai", "anthropic", "google", "groq", "deepseek", "xai", "qwen"] as const,
+  withToolCalling: [
+    "openai",
+    "anthropic",
+    "google",
+    "groq",
+    "deepseek",
+    "xai",
+    "qwen",
+  ] as const,
   /** Providers with streaming support */
   withStreaming: [
     "openai",

@@ -18,6 +18,8 @@ bun run examples/test-example.ts
 - **`spinners.ts`** - A simple example of using spinners for long-running tasks.
 - **`theming.ts`** - An interactive example to preview and switch between themes.
 - **`prompt-builder.tsx`** - **🏆 Teaching Example**: Advanced prompt builder demonstrating all major library features
+- **`artifact-chat-example.ts`** - **🎨 AI Artifact Demo**: Interactive CLI chat with Claude that extracts and displays code, diagrams, JSON, and more from AI responses
+- **`supermemory-example.ts`** - Integration with Supermemory for persistent memory storage and search
 
 ## The Prompt Builder - Comprehensive Teaching Example
 
@@ -43,10 +45,37 @@ bun run examples/tables-and-boxes.ts
 bun run examples/spinners.ts
 bun run examples/theming.ts
 bun run examples/prompt-builder.tsx
+bun run examples/artifact-chat-example.ts
+bun run examples/supermemory-example.ts
 
 # error-handling.ts is a reference file (examples are commented out)
 # Uncomment examples in the file to test them individually
 ```
+
+### Artifact Chat Example
+
+The `artifact-chat-example.ts` demonstrates interactive chat with automatic artifact extraction:
+
+```bash
+# Set your OpenAI API key first
+export OPENAI_API_KEY=sk_your_key_here
+
+# Run the artifact chat example
+bun run examples/artifact-chat-example.ts
+```
+
+Once running, you can:
+1. Chat with Claude about code, diagrams, JSON data, etc.
+2. Ask for specific artifacts (e.g., "Write me a Python function to...")
+3. View extracted artifacts with syntax highlighting
+4. Copy artifacts to clipboard or save to files
+5. View Mermaid diagrams (with link to mermaid.live)
+
+**Example prompts to try:**
+- "Write a TypeScript function to sort an array"
+- "Create a Mermaid flowchart for a login process"
+- "Give me a JSON config example for a web server"
+- "Write a Bash backup script"
 
 **Note:** Interactive examples (with prompts) need to run in a terminal with TTY support. They won't work in non-interactive environments.
 

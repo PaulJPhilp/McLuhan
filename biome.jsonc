@@ -8,7 +8,7 @@
   },
   "overrides": [
     {
-      "include": [
+      "includes": [
         "**/*.md"
       ],
       "linter": {

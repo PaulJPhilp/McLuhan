@@ -7,7 +7,6 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGateway } from "@ai-sdk/gateway";
 import * as Effect from "effect/Effect";
 import { AiSdkConfigError, AiSdkProviderError } from "../errors.js";
 
@@ -22,8 +21,7 @@ export type ProviderName =
   | "perplexity"
   | "qwen"
   | "xai"
-  | "groq"
-  | "gateway";
+  | "groq";
 
 /**
  * Provider configuration options
@@ -57,25 +55,30 @@ export function createProvider(
         case "openai":
           return createOpenAI({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
-            organization: config.organization,
-            project: config.project,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+            ...(config.organization ? { organization: config.organization } : {}),
+            ...(config.project ? { project: config.project } : {}),
           });
 
         case "anthropic":
           return createAnthropic({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
           });
 
         case "google":
-          // Google provider uses a different pattern
-          return google;
+          // Google provider needs API key passed when creating models
+          // Return a wrapper that includes the API key
+          return {
+            _isGoogleProvider: true,
+            _apiKey: config.apiKey,
+            _provider: google,
+          };
 
         case "groq":
           return createGroq({
             apiKey: config.apiKey,
-            baseURL: config.baseURL,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
           });
 
         case "deepseek":
@@ -108,13 +111,6 @@ export function createProvider(
               "https://dashscope.aliyuncs.com/compatible-mode/v1",
           });
 
-        case "gateway":
-          // Vercel AI Gateway with v2 specification models
-          return createGateway({
-            apiKey: config.apiKey,
-            baseURL: config.baseURL,
-          });
-
         default:
           return yield* Effect.fail(
             new AiSdkProviderError({
@@ -144,6 +140,52 @@ export function getLanguageModel(
 ): Effect.Effect<any, AiSdkProviderError> {
   return Effect.gen(function* () {
     try {
+      // Handle Google provider wrapper with API key
+      if (provider._isGoogleProvider) {
+        // Validate Google provider wrapper structure
+        if (!provider._apiKey) {
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Google provider wrapper missing API key for model ${modelId}`,
+              provider: "google",
+            })
+          );
+        }
+        if (!provider._provider) {
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Google provider wrapper missing provider instance for model ${modelId}`,
+              provider: "google",
+            })
+          );
+        }
+
+        // Google provider uses languageModel method with API key in options
+        try {
+          console.log(`[Google] Creating model ${modelId} with API key length: ${provider._apiKey.length}`);
+          const model = provider._provider.languageModel(modelId, { apiKey: provider._apiKey });
+          console.log(`[Google] Model ${modelId} created successfully`);
+          return model;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          console.error(`[Google] Failed to create model ${modelId}:`, errorMessage);
+          if (errorStack) {
+            console.error(`[Google] Error stack:`, errorStack);
+          }
+          if (error instanceof Error && error.name) {
+            console.error(`[Google] Error name:`, error.name);
+          }
+          return yield* Effect.fail(
+            new AiSdkProviderError({
+              message: `Failed to create Google model ${modelId}: ${errorMessage}`,
+              provider: "google",
+              cause: error,
+            })
+          );
+        }
+      }
+
       // Most providers use the function call pattern
       if (typeof provider === "function") {
         return provider(modelId);
@@ -225,11 +267,8 @@ export function getEmbeddingModel(
         return provider.embedding(modelId);
       }
 
-      if (
-        provider.textEmbedding &&
-        typeof provider.textEmbedding === "function"
-      ) {
-        return provider.textEmbedding(modelId);
+      if (provider.embedding && typeof provider.embedding === "function") {
+        return provider.embedding(modelId);
       }
 
       return yield* Effect.fail(
