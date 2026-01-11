@@ -206,6 +206,75 @@ export type MemoryUploadFileParams = {
   readonly mimeType?: string;
 };
 
+/**
+ * Parameters for bulk deleting memories.
+ * @since 4.0.0
+ */
+export type MemoryDeleteBulkParams = {
+  /**
+   * Optional array of memory IDs to delete.
+   */
+  readonly ids?: readonly string[];
+
+  /**
+   * Optional array of container tags to delete documents from.
+   */
+  readonly containerTags?: readonly string[];
+};
+
+/**
+ * Parameters for batch adding memories.
+ * @since 4.0.0
+ */
+export type MemoryBatchAddParams = {
+  /**
+   * Array of memories to add.
+   */
+  readonly documents: readonly MemoryAddParams[];
+};
+
+/**
+ * Parameters for forgetting a memory (v4).
+ * @since 4.0.0
+ */
+export type MemoryForgetParams = {
+  /**
+   * Optional tag for the container.
+   */
+  readonly containerTag?: string;
+
+  /**
+   * Content to forget.
+   */
+  readonly content?: string;
+
+  /**
+   * Memory ID to forget.
+   */
+  readonly memoryId?: string;
+};
+
+/**
+ * Parameters for updating a memory (v4).
+ * @since 4.0.0
+ */
+export type MemoryUpdateMemoryParams = {
+  /**
+   * The new content for the memory.
+   */
+  readonly newContent: string;
+
+  /**
+   * Optional tag for the container.
+   */
+  readonly containerTag?: string;
+
+  /**
+   * Optional memory ID to update.
+   */
+  readonly memoryId?: string;
+};
+
 // ============================================================================
 // Response Types
 // ============================================================================
@@ -235,6 +304,60 @@ export type MemoryUpdateResponse = {
 export type MemoryUploadFileResponse = {
   readonly id: string;
   readonly status: string;
+};
+
+/**
+ * Response from bulk deleting memories.
+ * @since 4.0.0
+ */
+export type MemoryDeleteBulkResponse = {
+  readonly deletedCount: number;
+  readonly success: boolean;
+  readonly containerTags?: readonly string[];
+  readonly errors?: readonly {
+    readonly id: string;
+    readonly error: string;
+  }[];
+};
+
+/**
+ * Response from batch adding memories.
+ * @since 4.0.0
+ */
+export type MemoryBatchAddResponse = readonly {
+  readonly id: string;
+  readonly status: string;
+}[];
+
+/**
+ * Response from forgetting a memory.
+ * @since 4.0.0
+ */
+export type MemoryForgetResponse = {
+  readonly id: string;
+  readonly forgotten: boolean;
+};
+
+/**
+ * Response from updating a memory (v4).
+ * @since 4.0.0
+ */
+export type MemoryUpdateMemoryResponse = {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly memory: string;
+  readonly parentMemoryId: string | null;
+  readonly rootMemoryId: string | null;
+  readonly version: number;
+};
+
+/**
+ * Response from listing processing documents.
+ * @since 4.0.0
+ */
+export type MemoryListProcessingResponse = {
+  readonly documents: readonly MemoryListItem[];
+  readonly totalCount: number;
 };
 
 /**

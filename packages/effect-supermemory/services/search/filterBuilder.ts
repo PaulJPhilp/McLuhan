@@ -8,9 +8,8 @@
  */
 
 import {
-  API_FIELD_NAMES,
+  API_FILTER_TYPES,
   FILTER_JSON_OPERATORS,
-  FILTER_OPERATORS,
   FILTER_TAGS,
 } from "@/Constants.js";
 
@@ -24,11 +23,20 @@ import {
  * - `gt`: Greater than
  * - `gte`: Greater than or equal to
  * - `in`: Value is in array
+ * - `contains`: String contains value
  *
  * @since 1.0.0
  * @category Types
  */
-export type FilterOperator = "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "in";
+export type FilterOperator =
+  | "eq"
+  | "ne"
+  | "lt"
+  | "lte"
+  | "gt"
+  | "gte"
+  | "in"
+  | "contains";
 
 /**
  * Primitive value types supported in filter comparisons.
@@ -57,6 +65,9 @@ export type FilterValue = FilterPrimitive | FilterPrimitive[];
 export type FilterExpression =
   | TagFilter
   | MetadataFilter
+  | NumericFilter
+  | ArrayContainsFilter
+  | StringContainsFilter
   | ScoreFilter
   | AndFilter
   | OrFilter
@@ -82,8 +93,50 @@ export type TagFilter = {
 export type MetadataFilter = {
   readonly _tag: typeof FILTER_TAGS.METADATA_FILTER;
   readonly field: string;
-  readonly operator: FilterOperator;
-  readonly value: FilterValue;
+  readonly value: string;
+  readonly ignoreCase?: boolean | undefined;
+  readonly negate?: boolean | undefined;
+};
+
+/**
+ * Filter by numeric value comparison.
+ *
+ * @since 4.0.0
+ * @category Types
+ */
+export type NumericFilter = {
+  readonly _tag: typeof FILTER_TAGS.NUMERIC_FILTER;
+  readonly field: string;
+  readonly operator: ">" | "<" | ">=" | "<=" | "=";
+  readonly value: number;
+  readonly negate?: boolean | undefined;
+};
+
+/**
+ * Filter by array membership.
+ *
+ * @since 4.0.0
+ * @category Types
+ */
+export type ArrayContainsFilter = {
+  readonly _tag: typeof FILTER_TAGS.ARRAY_CONTAINS_FILTER;
+  readonly field: string;
+  readonly value: string;
+  readonly negate?: boolean | undefined;
+};
+
+/**
+ * Filter by string containment.
+ *
+ * @since 4.0.0
+ * @category Types
+ */
+export type StringContainsFilter = {
+  readonly _tag: typeof FILTER_TAGS.STRING_CONTAINS_FILTER;
+  readonly field: string;
+  readonly value: string;
+  readonly ignoreCase?: boolean | undefined;
+  readonly negate?: boolean | undefined;
 };
 
 /**
@@ -140,83 +193,93 @@ export type NotFilter = {
 export const toJSON = (filter: FilterExpression): Record<string, unknown> => {
   switch (filter._tag) {
     case FILTER_TAGS.TAG_FILTER:
-      return { [API_FIELD_NAMES.TAG]: filter.value };
+      return {
+        key: "tags",
+        value: filter.value,
+        filterType: API_FILTER_TYPES.ARRAY_CONTAINS,
+      };
 
-    case FILTER_TAGS.METADATA_FILTER: {
-      const key = `${API_FIELD_NAMES.METADATA_PREFIX}${filter.field}`;
-      switch (filter.operator) {
-        case FILTER_OPERATORS.EQUAL:
-          return { [key]: filter.value };
-        case FILTER_OPERATORS.NOT_EQUAL:
-          return { [key]: { [FILTER_JSON_OPERATORS.NOT_EQUAL]: filter.value } };
-        case FILTER_OPERATORS.LESS_THAN:
-          return { [key]: { [FILTER_JSON_OPERATORS.LESS_THAN]: filter.value } };
-        case FILTER_OPERATORS.LESS_THAN_OR_EQUAL:
-          return {
-            [key]: { [FILTER_JSON_OPERATORS.LESS_THAN_OR_EQUAL]: filter.value },
-          };
-        case FILTER_OPERATORS.GREATER_THAN:
-          return {
-            [key]: { [FILTER_JSON_OPERATORS.GREATER_THAN]: filter.value },
-          };
-        case FILTER_OPERATORS.GREATER_THAN_OR_EQUAL:
-          return {
-            [key]: {
-              [FILTER_JSON_OPERATORS.GREATER_THAN_OR_EQUAL]: filter.value,
-            },
-          };
-        case FILTER_OPERATORS.IN:
-          return { [key]: { [FILTER_JSON_OPERATORS.IN]: filter.value } };
-        default: {
-          const _exhaustive: never = filter.operator;
-          return _exhaustive;
-        }
-      }
-    }
+    case FILTER_TAGS.METADATA_FILTER:
+      return {
+        key: filter.field,
+        value: filter.value,
+        filterType: API_FILTER_TYPES.METADATA,
+        ...(filter.ignoreCase !== undefined && {
+          ignoreCase: filter.ignoreCase,
+        }),
+        ...(filter.negate !== undefined && { negate: filter.negate }),
+      };
+
+    case FILTER_TAGS.NUMERIC_FILTER:
+      return {
+        key: filter.field,
+        value: String(filter.value),
+        filterType: API_FILTER_TYPES.NUMERIC,
+        numericOperator: filter.operator,
+        ...(filter.negate !== undefined && { negate: filter.negate }),
+      };
+
+    case FILTER_TAGS.ARRAY_CONTAINS_FILTER:
+      return {
+        key: filter.field,
+        value: filter.value,
+        filterType: API_FILTER_TYPES.ARRAY_CONTAINS,
+        ...(filter.negate !== undefined && { negate: filter.negate }),
+      };
+
+    case FILTER_TAGS.STRING_CONTAINS_FILTER:
+      return {
+        key: filter.field,
+        value: filter.value,
+        filterType: API_FILTER_TYPES.STRING_CONTAINS,
+        ...(filter.ignoreCase !== undefined && {
+          ignoreCase: filter.ignoreCase,
+        }),
+        ...(filter.negate !== undefined && { negate: filter.negate }),
+      };
 
     case FILTER_TAGS.SCORE_FILTER: {
+      // Score filters are still handled via $and/$or if they don't fit the new schema
+      // but the new API might have a better way. For now keeping it compatible
+      // with how it was, but adapting to the new structure if possible.
+      // Actually, v4 SDK doesn't seem to have a specific score filter type in SearchDocumentsParams.
+      // It might be using 'numeric' filterType for score.
       const conditions: Record<string, unknown>[] = [];
       if (filter.min !== undefined) {
         conditions.push({
-          [API_FIELD_NAMES.SCORE]: {
-            [FILTER_JSON_OPERATORS.GREATER_THAN_OR_EQUAL]: filter.min,
-          },
+          key: "score",
+          value: String(filter.min),
+          filterType: API_FILTER_TYPES.NUMERIC,
+          numericOperator: ">=",
         });
       }
       if (filter.max !== undefined) {
         conditions.push({
-          [API_FIELD_NAMES.SCORE]: {
-            [FILTER_JSON_OPERATORS.LESS_THAN_OR_EQUAL]: filter.max,
-          },
+          key: "score",
+          value: String(filter.max),
+          filterType: API_FILTER_TYPES.NUMERIC,
+          numericOperator: "<=",
         });
       }
-      if (conditions.length === 0) {
-        return {};
-      }
-      if (conditions.length === 1) {
-        const firstCondition = conditions[0];
-        if (firstCondition === undefined) {
-          return {};
-        }
-        return firstCondition;
-      }
-      return { [FILTER_JSON_OPERATORS.AND]: conditions };
+      if (conditions.length === 0) return {};
+      if (conditions.length === 1) return conditions[0]!;
+      return { [FILTER_JSON_OPERATORS.V4_AND]: conditions };
     }
 
     case FILTER_TAGS.AND_FILTER:
       return {
-        [FILTER_JSON_OPERATORS.AND]: filter.conditions.map(toJSON),
+        [FILTER_JSON_OPERATORS.V4_AND]: filter.conditions.map(toJSON),
       };
 
     case FILTER_TAGS.OR_FILTER:
       return {
-        [FILTER_JSON_OPERATORS.OR]: filter.conditions.map(toJSON),
+        [FILTER_JSON_OPERATORS.V4_OR]: filter.conditions.map(toJSON),
       };
 
-    case FILTER_TAGS.NOT_FILTER:
-      return {
-        [FILTER_JSON_OPERATORS.NOT]: toJSON(filter.condition),
-      };
+    case FILTER_TAGS.NOT_FILTER: {
+      const inner = toJSON(filter.condition);
+      return { ...inner, negate: true };
+    }
 
     default: {
       const _exhaustive: never = filter;
@@ -243,19 +306,91 @@ export const Filter = {
   }),
 
   /**
-   * Filter by metadata field equality.
+   * Filter by metadata field.
    * @example
    * Filter.meta("author", "eq", "Paul")
+   * Filter.meta("version", "gt", 2)
    */
   meta: (
     field: string,
     operator: FilterOperator,
-    value: FilterValue
-  ): MetadataFilter => ({
-    _tag: FILTER_TAGS.METADATA_FILTER,
+    value: FilterValue,
+    options?: { ignoreCase?: boolean; negate?: boolean }
+  ): FilterExpression => {
+    if (typeof value === "number") {
+      const numericOpMap: Record<string, ">" | "<" | ">=" | "<=" | "="> = {
+        eq: "=",
+        ne: "=", // We'll handle 'ne' via negate
+        gt: ">",
+        gte: ">=",
+        lt: "<",
+        lte: "<=",
+      };
+      return {
+        _tag: FILTER_TAGS.NUMERIC_FILTER,
+        field,
+        operator: numericOpMap[operator] ?? "=",
+        value,
+        negate: operator === "ne" ? true : options?.negate,
+      };
+    }
+    if (operator === "contains") {
+      return {
+        _tag: FILTER_TAGS.STRING_CONTAINS_FILTER,
+        field,
+        value: String(value),
+        ...options,
+      };
+    }
+    if (operator === "in") {
+      return {
+        _tag: FILTER_TAGS.ARRAY_CONTAINS_FILTER,
+        field,
+        value: String(Array.isArray(value) ? value[0] : value),
+        negate: options?.negate,
+      };
+    }
+    return {
+      _tag: FILTER_TAGS.METADATA_FILTER,
+      field,
+      value: String(value),
+      negate: operator === "ne" ? true : options?.negate,
+      ...options,
+    };
+  },
+
+  /**
+   * Filter by numeric value comparison.
+   * @example
+   * Filter.numeric("version", ">", 2)
+   */
+  numeric: (
+    field: string,
+    operator: ">" | "<" | ">=" | "<=" | "=",
+    value: number,
+    options?: { negate?: boolean }
+  ): NumericFilter => ({
+    _tag: FILTER_TAGS.NUMERIC_FILTER,
     field,
     operator,
     value,
+    ...options,
+  }),
+
+  /**
+   * Filter by string containment.
+   * @example
+   * Filter.contains("title", "Effect")
+   */
+  contains: (
+    field: string,
+    value: string,
+    options?: { ignoreCase?: boolean; negate?: boolean }
+  ): StringContainsFilter => ({
+    _tag: FILTER_TAGS.STRING_CONTAINS_FILTER,
+    field,
+    value,
+    ...options,
   }),
 
   /**

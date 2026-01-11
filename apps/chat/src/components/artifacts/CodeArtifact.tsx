@@ -44,7 +44,11 @@ export const CodeArtifact: FC<CodeArtifactProps> = ({ artifact }) => {
 					)}
 				</button>
 			</div>
-			<Highlight theme={themes.github} code={artifact.content} language={language as any}>
+			<Highlight
+				theme={themes.github}
+				code={artifact.content}
+				language={language as any}
+			>
 				{({ className, style, tokens, getLineProps, getTokenProps }) => (
 					<pre className={`${className} p-4 overflow-x-auto`} style={style}>
 						{tokens.map((line, i) => {

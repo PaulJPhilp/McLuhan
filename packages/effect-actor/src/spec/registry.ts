@@ -48,45 +48,46 @@ export interface SpecRegistryApi {
 export class SpecRegistry extends Effect.Service<SpecRegistry>()(
 	"effect-actor/SpecRegistry",
 	{
-		effect: Effect.succeed({
-			/**
-			 * Register an actor spec
-			 * @param spec - The actor spec to register
-			 */
-			register: (spec: ActorSpec) => {
-				specs.set(spec.id, spec);
-				return Effect.void;
-			},
+		effect: Effect.gen(function* () {
+			const specs = new Map<string, ActorSpec>();
 
-			/**
-			 * Get a spec by ID
-			 * @param id - The spec ID (should match actorType)
-			 * @returns The spec if found, or SpecNotFoundError
-			 */
-			get: (id: string) =>
-				specs.has(id)
-					? Effect.succeed(specs.get(id)!)
-					: Effect.fail(
-						new SpecNotFoundError({
-							actorType: id,
-							availableSpecs: Array.from(specs.keys()),
-						}),
-					),
+			return {
+				/**
+				 * Register an actor spec
+				 * @param spec - The actor spec to register
+				 */
+				register: (spec: ActorSpec) => {
+					specs.set(spec.id, spec);
+					return Effect.void;
+				},
 
-			/**
-			 * Get all registered specs
-			 * @returns Array of all specs
-			 */
-			all: () => Effect.succeed(Array.from(specs.values())),
+				/**
+				 * Get a spec by ID
+				 * @param id - The spec ID (should match actorType)
+				 * @returns The spec if found, or SpecNotFoundError
+				 */
+				get: (id: string) =>
+					specs.has(id)
+						? Effect.succeed(specs.get(id)!)
+						: Effect.fail(
+							new SpecNotFoundError({
+								actorType: id,
+								availableSpecs: Array.from(specs.keys()),
+							}),
+						),
 
-			/**
-			 * Check if a spec is registered
-			 * @param id - The spec ID to check
-			 */
-			has: (id: string) => Effect.succeed(specs.has(id)),
-		} as SpecRegistryApi),
+				/**
+				 * Get all registered specs
+				 * @returns Array of all specs
+				 */
+				all: () => Effect.succeed(Array.from(specs.values())),
+
+				/**
+				 * Check if a spec is registered
+				 * @param id - The spec ID to check
+				 */
+				has: (id: string) => Effect.succeed(specs.has(id)),
+			} satisfies SpecRegistryApi;
+		}),
 	},
 ) { }
-
-// In-memory storage for the default implementation
-const specs = new Map<string, ActorSpec>();

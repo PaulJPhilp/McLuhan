@@ -20,14 +20,20 @@ import {
 	createTestMermaidArtifact,
 	createTestArtifacts,
 } from "../fixtures/artifacts.js";
-import { createTestMessage, createTestMessages } from "../fixtures/test-data.js";
+import {
+	createTestMessage,
+	createTestMessages,
+} from "../fixtures/test-data.js";
 import {
 	createMockArtifactExtractionService,
 	createMockArtifactStorageService,
 	createTestServiceLayer,
 	createCodeExtractionMock,
 } from "../helpers/service-mocks.js";
-import { testArtifactFlow, testArtifactStorage } from "../helpers/integration-helpers.js";
+import {
+	testArtifactFlow,
+	testArtifactStorage,
+} from "../helpers/integration-helpers.js";
 
 describe("Artifact Testing Examples", () => {
 	describe("Using Fixtures", () => {
@@ -98,8 +104,8 @@ describe("Artifact Testing Examples", () => {
 
 		it("should create mock extraction that returns artifacts", async () => {
 			const testArtifact = createTestCodeArtifact();
-			const mockLayer = createMockArtifactExtractionService(
-				() => Effect.succeed([testArtifact]),
+			const mockLayer = createMockArtifactExtractionService(() =>
+				Effect.succeed([testArtifact]),
 			);
 
 			const program = Effect.gen(function* () {
@@ -160,10 +166,7 @@ describe("Artifact Testing Examples", () => {
 		it("should combine multiple service mocks", async () => {
 			const extractionLayer = createCodeExtractionMock();
 			const storageLayer = createMockArtifactStorageService();
-			const testLayer = createTestServiceLayer(
-				extractionLayer,
-				storageLayer,
-			);
+			const testLayer = createTestServiceLayer(extractionLayer, storageLayer);
 
 			const content = "```javascript\nconsole.log('test')\n```";
 			const messageId = "msg-1";
@@ -258,17 +261,12 @@ And JSON:
 				const artifacts = createTestArtifacts();
 
 				for (const msg of messages) {
-					yield* storage.saveArtifacts(
-						msg.id,
-						artifacts.slice(0, 2),
-					);
+					yield* storage.saveArtifacts(msg.id, artifacts.slice(0, 2));
 				}
 
 				// Retrieve and verify
 				const results = yield* Effect.all(
-					messages.map((msg) =>
-						storage.getArtifacts(msg.id),
-					),
+					messages.map((msg) => storage.getArtifacts(msg.id)),
 				);
 
 				return {
@@ -294,9 +292,7 @@ And JSON:
 				const storage = yield* ArtifactStorageService;
 
 				// Try to get non-existent artifacts
-				const result = yield* storage.getArtifacts(
-					"non-existent",
-				);
+				const result = yield* storage.getArtifacts("non-existent");
 
 				return result;
 			});

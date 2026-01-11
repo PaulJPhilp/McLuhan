@@ -1,6 +1,6 @@
 import { FC, useMemo, useState } from "react";
 import type { Artifact } from "effect-artifact";
-import JSONTree from "react-json-tree";
+import { JSONTree } from "react-json-tree";
 import { Copy, Check } from "lucide-react";
 
 interface JsonArtifactProps {
@@ -13,7 +13,10 @@ interface JsonArtifactProps {
 export const JsonArtifact: FC<JsonArtifactProps> = ({ artifact }) => {
 	const [copied, setCopied] = useState(false);
 
-	if (artifact.type.category !== "data" || artifact.type.dataFormat !== "json") {
+	if (
+		artifact.type.category !== "data" ||
+		artifact.type.dataFormat !== "json"
+	) {
 		return null;
 	}
 

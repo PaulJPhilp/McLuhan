@@ -14,7 +14,9 @@ export const ChatThread: FC = () => {
 	const { messages, isLoading, error, loadingModels } = useChatContext();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const [autoScroll, setAutoScroll] = useState(true);
-	const [modelInfos, setModelInfos] = useState<Map<string, { displayName: string; provider: string }>>(new Map());
+	const [modelInfos, setModelInfos] = useState<
+		Map<string, { displayName: string; provider: string }>
+	>(new Map());
 
 	// Load model info for loading models
 	useEffect(() => {
@@ -35,7 +37,10 @@ export const ChatThread: FC = () => {
 					program.pipe(Effect.provide(ModelConfigService.Default())),
 				);
 
-				const infos = new Map<string, { displayName: string; provider: string }>();
+				const infos = new Map<
+					string,
+					{ displayName: string; provider: string }
+				>();
 				for (const modelId of loadingModels) {
 					const model = availableModels.find((m) => m.modelId === modelId);
 					if (model) {
@@ -97,7 +102,7 @@ export const ChatThread: FC = () => {
 								typeof m.metadata === "object" &&
 								(m.metadata as Record<string, unknown>).modelId === modelId,
 						);
-						
+
 						if (hasMessage) return null;
 
 						return (

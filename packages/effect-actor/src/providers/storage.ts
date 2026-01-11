@@ -73,7 +73,42 @@ export interface StorageProviderApi {
 export class StorageProvider extends Effect.Service<StorageProvider>()(
 	"effect-actor/StorageProvider",
 	{
-		succeed: {} as StorageProviderApi,
 		accessors: true,
+		effect: Effect.sync(
+			(): StorageProviderApi => ({
+				save: () =>
+					Effect.fail(
+						new StorageError({
+							backend: "none",
+							operation: "save",
+							reason: "No storage provider provided",
+						}),
+					),
+				load: () =>
+					Effect.fail(
+						new StorageError({
+							backend: "none",
+							operation: "load",
+							reason: "No storage provider provided",
+						}),
+					),
+				query: () =>
+					Effect.fail(
+						new StorageError({
+							backend: "none",
+							operation: "query",
+							reason: "No storage provider provided",
+						}),
+					),
+				getHistory: () =>
+					Effect.fail(
+						new StorageError({
+							backend: "none",
+							operation: "getHistory",
+							reason: "No storage provider provided",
+						}),
+					),
+			}),
+		),
 	},
 ) {}

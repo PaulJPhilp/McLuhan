@@ -433,8 +433,8 @@ export function generateImages(
           result.images[0] && "url" in result.images[0]
             ? (result.images[0].url as string)
             : result.images[0] && "data" in result.images[0]
-            ? (result.images[0].data as string)
-            : "",
+              ? (result.images[0].data as string)
+              : "",
         additionalImages: result.images.slice(1).map((img) => {
           const image = img as { url?: string; data?: string };
           return image.url || image.data || "";
@@ -513,8 +513,8 @@ export function generateAudio(
             ? typeof result.audio === "string"
               ? result.audio
               : "data" in result.audio
-              ? (result.audio.data as string)
-              : ""
+                ? (result.audio.data as string)
+                : ""
             : "",
         format: "mp3", // Default format
         parameters: {
@@ -600,8 +600,8 @@ export function transcribeAudio(
               typeof segment.id === "number"
                 ? segment.id
                 : typeof segment.id === "string"
-                ? parseInt(segment.id, 10) || 0
-                : 0,
+                  ? parseInt(segment.id, 10) || 0
+                  : 0,
             start: segment.start ?? 0,
             end: segment.end ?? 0,
             text: segment.text || "",

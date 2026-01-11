@@ -13,7 +13,7 @@ import { atomRuntime } from "./atomRuntime.js";
  * - .fn() creates a "function atom" that requires being invoked/called
  * - With .fn(), refreshing doesn't trigger re-computation (counter stays 0)
  * - With .atom(), refreshing invalidates and triggers re-computation
- * 
+ *
  * Lazy initialization: Only create the atom when first accessed to avoid
  * blocking vite during module compilation
  */

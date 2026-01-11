@@ -1,6 +1,13 @@
 import { Result, useAtomRefresh, useAtomValue } from "@effect-atom/atom-react";
 import { Effect } from "effect";
-import { FC, ReactNode, createContext, useCallback, useContext, useState } from "react";
+import {
+	FC,
+	ReactNode,
+	createContext,
+	useCallback,
+	useContext,
+	useState,
+} from "react";
 import type {
 	Message,
 	ThreadMessage,
@@ -58,7 +65,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 	// Automatic reactive state - reads from ThreadService via atom
 	const stateResult = useAtomValue(threadStateAtom);
 	const refreshThreadState = useAtomRefresh(threadStateAtom);
-	
+
 	// Per-model loading state (local React state, not in ThreadService)
 	const [loadingModels, setLoadingModels] = useState<string[]>([]);
 
@@ -68,7 +75,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 		isLoading: false,
 		error: undefined,
 		lastUpdated: Date.now(),
-	}));
+	})) as ThreadState;
 
 	// Helper to send a message to ThreadService and invalidate atom to trigger refresh
 	const sendToThreadService = useCallback(
@@ -150,8 +157,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 					// Get model configs for selected models
 					const getModelConfigsProgram = Effect.gen(function* () {
 						const modelConfigService = yield* ModelConfigService;
-						const availableModels = yield* modelConfigService.getAvailableModels();
-						
+						const availableModels =
+							yield* modelConfigService.getAvailableModels();
+
 						// Filter to selected models and create configs
 						const configs = [];
 						for (const modelId of modelIds) {
@@ -205,20 +213,23 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 									return;
 								}
 
-								console.log(`onChunk for ${modelId}: chunk length=${chunk.length}, accumulated length=${accumulated.length}`);
+								console.log(
+									`onChunk for ${modelId}: chunk length=${chunk.length}, accumulated length=${accumulated.length}`,
+								);
 
 								// Update ThreadService for this specific model
 								const updateProgram = Effect.gen(function* () {
 									const threadService = yield* ThreadService;
 									const threadState = yield* threadService.getState();
-									
+
 									// Find existing message for this model
 									const existingMessageIndex = threadState.messages.findIndex(
 										(m) =>
 											m.role === "assistant" &&
 											m.metadata &&
 											typeof m.metadata === "object" &&
-											(m.metadata as Record<string, unknown>).modelId === modelId,
+											(m.metadata as Record<string, unknown>).modelId ===
+												modelId,
 									);
 
 									const modelConfig = modelConfigs.find(
@@ -233,7 +244,8 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 
 									if (existingMessageIndex >= 0) {
 										// Update existing message - use a more efficient approach
-										const existingMessage = threadState.messages[existingMessageIndex]!;
+										const existingMessage =
+											threadState.messages[existingMessageIndex]!;
 										// Only update if content actually changed
 										if (existingMessage.content !== accumulated) {
 											const messagesBefore = threadState.messages.slice(
@@ -243,7 +255,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 											const messagesAfter = threadState.messages.slice(
 												existingMessageIndex + 1,
 											);
-											
+
 											// Clear all and rebuild
 											yield* threadService.send({ type: "CLEAR_MESSAGES" });
 											for (const msg of messagesBefore) {
@@ -252,7 +264,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 													payload: {
 														role: msg.role,
 														content: msg.content,
-														metadata: msg.metadata as Record<string, unknown> | undefined,
+														metadata: msg.metadata as
+															| Record<string, unknown>
+															| undefined,
 													},
 												});
 											}
@@ -262,7 +276,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 												payload: {
 													role: "assistant",
 													content: accumulated,
-													metadata,
+													metadata: metadata as Record<string, unknown> | undefined,
 												},
 											});
 											// Add remaining messages
@@ -272,7 +286,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 													payload: {
 														role: msg.role,
 														content: msg.content,
-														metadata: msg.metadata as Record<string, unknown> | undefined,
+														metadata: msg.metadata as
+															| Record<string, unknown>
+															| undefined,
 													},
 												});
 											}
@@ -284,7 +300,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 											payload: {
 												role: "assistant",
 												content: accumulated,
-												metadata,
+												metadata: metadata as Record<string, unknown> | undefined,
 											},
 										});
 									}
@@ -305,38 +321,47 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 							onModelComplete: (result) => {
 								console.log(
 									`[${result.provider}] Model ${result.modelId} completed: ${result.success ? "success" : "failed"}`,
-									result.content ? `Content length: ${result.content.length}` : `Error: ${result.error || "No error message"}`,
+									result.content
+										? `Content length: ${result.content.length}`
+										: `Error: ${result.error || "No error message"}`,
 								);
-								console.log(`[${result.provider}] Model ${result.modelId} result:`, {
-									success: result.success,
-									error: result.error,
-									contentLength: result.content?.length || 0,
-									contentPreview: result.content?.substring(0, 100),
-									durationMs: result.durationMs,
-									chunkCount: result.chunkCount,
-								});
-								
+								console.log(
+									`[${result.provider}] Model ${result.modelId} result:`,
+									{
+										success: result.success,
+										error: result.error,
+										contentLength: result.content?.length || 0,
+										contentPreview: result.content?.substring(0, 100),
+										durationMs: result.durationMs,
+										chunkCount: result.chunkCount,
+									},
+								);
+
 								// Always save a message for every model, even if it failed
 								// Use error message as content if no content was generated
-								const messageContent = result.content && result.content.trim().length > 0
-									? result.content
-									: result.error
-										? result.error // Store error message directly (will be displayed in error box)
-										: "No response generated";
-								
-								console.log(`[${result.provider}] Saving message for model ${result.modelId} with content length: ${messageContent.length}, success: ${result.success}, error: ${result.error || "none"}`);
-								
+								const messageContent =
+									result.content && result.content.trim().length > 0
+										? result.content
+										: result.error
+											? result.error // Store error message directly (will be displayed in error box)
+											: "No response generated";
+
+								console.log(
+									`[${result.provider}] Saving message for model ${result.modelId} with content length: ${messageContent.length}, success: ${result.success}, error: ${result.error || "none"}`,
+								);
+
 								const finalUpdateProgram = Effect.gen(function* () {
 									const threadService = yield* ThreadService;
 									const threadState = yield* threadService.getState();
-									
+
 									// Find existing message for this model
 									const existingMessageIndex = threadState.messages.findIndex(
 										(m) =>
 											m.role === "assistant" &&
 											m.metadata &&
 											typeof m.metadata === "object" &&
-											(m.metadata as Record<string, unknown>).modelId === result.modelId,
+											(m.metadata as Record<string, unknown>).modelId ===
+												result.modelId,
 									);
 
 									const modelConfig = modelConfigs.find(
@@ -352,7 +377,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 											}
 										: undefined;
 
-									console.log(`[${result.provider}] Found existing message at index ${existingMessageIndex} for model ${result.modelId}`);
+									console.log(
+										`[${result.provider}] Found existing message at index ${existingMessageIndex} for model ${result.modelId}`,
+									);
 									console.log(`[${result.provider}] Metadata being stored:`, {
 										modelId: metadata?.modelId,
 										modelProvider: metadata?.modelProvider,
@@ -365,14 +392,24 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 									if (existingMessageIndex >= 0) {
 										// Update existing message with final content and metrics
 										// Always update in onModelComplete to ensure metrics are added
-										const existingMessage = threadState.messages[existingMessageIndex]!;
-										console.log(`Existing message content length: ${existingMessage.content.length}, new content length: ${messageContent.length}`);
-										
-										const messagesBefore = threadState.messages.slice(0, existingMessageIndex);
-										const messagesAfter = threadState.messages.slice(existingMessageIndex + 1);
-										
-										console.log(`Updating message with metrics: ${messagesBefore.length} before, ${messagesAfter.length} after`);
-										
+										const existingMessage =
+											threadState.messages[existingMessageIndex]!;
+										console.log(
+											`Existing message content length: ${existingMessage.content.length}, new content length: ${messageContent.length}`,
+										);
+
+										const messagesBefore = threadState.messages.slice(
+											0,
+											existingMessageIndex,
+										);
+										const messagesAfter = threadState.messages.slice(
+											existingMessageIndex + 1,
+										);
+
+										console.log(
+											`Updating message with metrics: ${messagesBefore.length} before, ${messagesAfter.length} after`,
+										);
+
 										yield* threadService.send({ type: "CLEAR_MESSAGES" });
 										for (const msg of messagesBefore) {
 											yield* threadService.send({
@@ -380,7 +417,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 												payload: {
 													role: msg.role,
 													content: msg.content,
-													metadata: msg.metadata as Record<string, unknown> | undefined,
+													metadata: msg.metadata as
+														| Record<string, unknown>
+														| undefined,
 												},
 											});
 										}
@@ -390,7 +429,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 											payload: {
 												role: "assistant",
 												content: messageContent,
-												metadata: metadata as Record<string, unknown> | undefined,
+												metadata: metadata as
+													| Record<string, unknown>
+													| undefined,
 											},
 										});
 										for (const msg of messagesAfter) {
@@ -399,7 +440,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 												payload: {
 													role: msg.role,
 													content: msg.content,
-													metadata: msg.metadata as Record<string, unknown> | undefined,
+													metadata: msg.metadata as
+														| Record<string, unknown>
+														| undefined,
 												},
 											});
 										}
@@ -411,7 +454,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 											payload: {
 												role: "assistant",
 												content: messageContent,
-												metadata: metadata as Record<string, unknown> | undefined,
+												metadata: metadata as
+													| Record<string, unknown>
+													| undefined,
 											},
 										});
 									}
@@ -420,15 +465,22 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 								sharedRuntime
 									.runPromise(finalUpdateProgram)
 									.then(() => {
-										console.log(`[${result.provider}] Final message saved for model ${result.modelId} with success=${result.success}, error=${result.error || "none"}`);
+										console.log(
+											`[${result.provider}] Final message saved for model ${result.modelId} with success=${result.success}, error=${result.error || "none"}`,
+										);
 										refreshThreadState();
 									})
 									.catch((err) => {
-										console.error(`[${result.provider}] Failed to save final message for model ${result.modelId}:`, err);
+										console.error(
+											`[${result.provider}] Failed to save final message for model ${result.modelId}:`,
+											err,
+										);
 									});
-								
+
 								// Remove from loading list
-								setLoadingModels((prev) => prev.filter((id) => id !== result.modelId));
+								setLoadingModels((prev) =>
+									prev.filter((id) => id !== result.modelId),
+								);
 							},
 							onError: (modelId, error) => {
 								console.error(`Error for model ${modelId}:`, error);
@@ -441,7 +493,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 					const results = await sharedRuntime.runPromise(
 						multiModelProgram.pipe(
 							Effect.provide(MultiModelStreamingService.Default()),
-							Effect.catchAll((error) => {
+							Effect.catchAll((error: any) => {
 								const errorMessage =
 									error instanceof Error ? error.message : String(error);
 								return Effect.fail(new Error(errorMessage));
@@ -521,7 +573,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 
 					const result = await sharedRuntime.runPromise(
 						streamProgram.pipe(
-							Effect.catchAll((error) => {
+							Effect.catchAll((error: any) => {
 								const errorMessage =
 									error instanceof Error ? error.message : String(error);
 								if (errorMessage.includes("API key")) {

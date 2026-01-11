@@ -97,7 +97,7 @@ export function handleAddCommand(
     Effect.catchTag("SupermemoryRateLimitError", (error: any) =>
       Effect.gen(function* () {
         yield* Console.log(
-          `[Supermemory] Rate Limit Error: ${error.message} (Retry after ${error.retryAfter})`
+          `[Supermemory] Rate Limit Error: ${error.message} (Retry after ${error.retryAfterMs}ms)`
         );
         return { kind: "continue" } as const;
       })

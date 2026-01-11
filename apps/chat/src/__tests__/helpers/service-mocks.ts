@@ -22,8 +22,7 @@ export function createMockArtifactExtractionService(
 ): Layer.Layer<ArtifactExtractionService> {
 	return Layer.succeed(ArtifactExtractionService, {
 		extractFromContent:
-			extractFromContent ||
-			(() => Effect.succeed([] as readonly Artifact[])),
+			extractFromContent || (() => Effect.succeed([] as readonly Artifact[])),
 	} satisfies ArtifactExtractionServiceSchema);
 }
 
@@ -96,12 +95,17 @@ export function createCodeExtractionMock(): Layer.Layer<ArtifactExtractionServic
 
 			while ((match = codeBlockRegex.exec(content)) !== null) {
 				const [, language = "text", code] = match;
+				const now = new Date();
 				artifacts.push({
 					id: crypto.randomUUID(),
 					type: { category: "code", language },
-					content: code.trim(),
+					content: code?.trim() || "",
 					metadata: {
 						title: `${language.charAt(0).toUpperCase() + language.slice(1)} Code`,
+						version: "1.0.0",
+						created: now,
+						updated: now,
+						tags: ["ai-generated", language],
 					},
 				});
 			}
@@ -117,9 +121,7 @@ export function createCodeExtractionMock(): Layer.Layer<ArtifactExtractionServic
 export function createTestServiceLayer(
 	extractionLayer?: Layer.Layer<ArtifactExtractionService>,
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
-): Layer.Layer<
-	ArtifactExtractionService | ArtifactStorageService
-> {
+): Layer.Layer<ArtifactExtractionService | ArtifactStorageService> {
 	return Layer.mergeAll(
 		extractionLayer || createMockArtifactExtractionService(),
 		storageLayer || createMockArtifactStorageService(),

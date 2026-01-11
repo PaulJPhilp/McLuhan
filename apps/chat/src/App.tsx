@@ -72,9 +72,7 @@ VITE_ANTHROPIC_API_KEY=sk-ant-your-key-here`}
 		<ChatProvider>
 			<div className="w-full h-screen flex flex-col bg-white">
 				<header className="border-b border-chat-border px-6 py-4">
-					<h1 className="text-xl font-bold text-gray-900">
-						EffectTalk
-					</h1>
+					<h1 className="text-xl font-bold text-gray-900">EffectTalk</h1>
 				</header>
 
 				<main className="flex-1 overflow-hidden flex flex-col">

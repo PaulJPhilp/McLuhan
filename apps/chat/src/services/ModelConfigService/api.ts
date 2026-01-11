@@ -12,10 +12,7 @@ export interface ModelConfigServiceApi {
 	/**
 	 * Get all available models with their configurations
 	 */
-	readonly getAvailableModels: () => Effect.Effect<
-		readonly ModelInfo[],
-		never
-	>;
+	readonly getAvailableModels: () => Effect.Effect<readonly ModelInfo[], never>;
 
 	/**
 	 * Get configuration for a specific model

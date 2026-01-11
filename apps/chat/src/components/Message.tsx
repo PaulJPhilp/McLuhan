@@ -39,7 +39,10 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 				.runPromise(program)
 				.then(setArtifacts)
 				.catch((err) => {
-					console.warn(`Failed to load artifacts for message ${message.id}:`, err);
+					console.warn(
+						`Failed to load artifacts for message ${message.id}:`,
+						err,
+					);
 					setArtifacts([]);
 				});
 		}
@@ -58,7 +61,8 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 		message.metadata &&
 		typeof message.metadata === "object" &&
 		(message.metadata as Record<string, unknown>).metrics
-			? ((message.metadata as Record<string, unknown>).metrics as ModelStreamMetrics)
+			? ((message.metadata as Record<string, unknown>)
+					.metrics as ModelStreamMetrics)
 			: undefined;
 	const error =
 		message.metadata &&
@@ -74,15 +78,24 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 			: undefined;
 
 	// Debug logging for assistant messages with potential errors
-	if (message.role === "assistant" && (!success || error || (!message.content || message.content === "No response generated"))) {
-		console.log(`[Message] Debug for model ${message.metadata && typeof message.metadata === "object" ? (message.metadata as Record<string, unknown>).modelId : "unknown"}:`, {
-			hasError: !!error,
-			error,
-			success,
-			contentLength: message.content?.length || 0,
-			content: message.content?.substring(0, 50),
-			metadata: message.metadata,
-		});
+	if (
+		message.role === "assistant" &&
+		(!success ||
+			error ||
+			!message.content ||
+			message.content === "No response generated")
+	) {
+		console.log(
+			`[Message] Debug for model ${message.metadata && typeof message.metadata === "object" ? (message.metadata as Record<string, unknown>).modelId : "unknown"}:`,
+			{
+				hasError: !!error,
+				error,
+				success,
+				contentLength: message.content?.length || 0,
+				content: message.content?.substring(0, 50),
+				metadata: message.metadata,
+			},
+		);
 	}
 
 	// Determine if we should show error box:
@@ -90,10 +103,13 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 	// - If success is explicitly false
 	// - If content is "No response generated" (indicates failure)
 	// - If success is undefined and content is empty or "No response generated"
-	const shouldShowError = 
-		error || 
-		success === false || 
-		(message.role === "assistant" && (message.content === "No response generated" || (!success && (!message.content || message.content.trim().length === 0))));
+	const shouldShowError =
+		error ||
+		success === false ||
+		(message.role === "assistant" &&
+			(message.content === "No response generated" ||
+				(!success &&
+					(!message.content || message.content.trim().length === 0))));
 
 	// Get model color if this is an assistant message with a model
 	const modelColor =
@@ -135,7 +151,7 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 		>
 			<div
 				className={clsx("max-w-md px-4 py-2 rounded-lg", bgColor, textColor, {
-					"border": modelColor && !isUser,
+					border: modelColor && !isUser,
 				})}
 				style={inlineStyle}
 			>
@@ -148,7 +164,11 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 										⚠️ Error
 									</p>
 									<p className="text-sm text-red-800 whitespace-pre-wrap">
-										{error || (message.content === "No response generated" ? "Model failed to generate a response. Check console for details." : message.content) || "Unknown error occurred"}
+										{error ||
+											(message.content === "No response generated"
+												? "Model failed to generate a response. Check console for details."
+												: message.content) ||
+											"Unknown error occurred"}
 									</p>
 								</div>
 							) : message.content ? (

@@ -5,7 +5,7 @@
 
 /**
  * API Endpoints used across services.
- * Based on official Supermemory SDK v3.10.0
+ * Based on official Supermemory SDK v4.0.0
  * @since 1.0.0
  */
 export const API_ENDPOINTS = {
@@ -13,17 +13,22 @@ export const API_ENDPOINTS = {
    * Memories (documents) endpoints
    */
   MEMORIES: {
-    BASE: "/v1/memories",
-    BY_ID: (id: string) => `/v1/memories/${encodeURIComponent(id)}`,
-    UPLOAD: "/v1/memories/upload",
+    BASE: "/v3/documents",
+    BY_ID: (id: string) => `/v3/documents/${encodeURIComponent(id)}`,
+    UPLOAD: "/v3/documents/file",
+    BATCH: "/v3/documents/batch",
+    BULK: "/v3/documents/bulk",
+    PROCESSING: "/v3/documents/processing",
+    LIST: "/v3/documents/list",
+    V4: "/v4/memories",
   },
   /**
    * Search endpoints
    */
   SEARCH: {
-    DOCUMENTS: "/v1/search/documents",
-    EXECUTE: "/v1/search",
-    MEMORIES: "/v1/search/memories",
+    DOCUMENTS: "/v3/search",
+    EXECUTE: "/v3/search",
+    MEMORIES: "/v4/search",
   },
   /**
    * Connections endpoints
@@ -126,10 +131,24 @@ export const LIMITS = {
 export const FILTER_TAGS = {
   TAG_FILTER: "TagFilter",
   METADATA_FILTER: "MetadataFilter",
+  NUMERIC_FILTER: "NumericFilter",
+  ARRAY_CONTAINS_FILTER: "ArrayContainsFilter",
+  STRING_CONTAINS_FILTER: "StringContainsFilter",
   SCORE_FILTER: "ScoreFilter",
   AND_FILTER: "AndFilter",
   OR_FILTER: "OrFilter",
   NOT_FILTER: "NotFilter",
+} as const;
+
+/**
+ * Filter type strings used in API request JSON.
+ * @since 4.0.0
+ */
+export const API_FILTER_TYPES = {
+  METADATA: "metadata",
+  NUMERIC: "numeric",
+  ARRAY_CONTAINS: "array_contains",
+  STRING_CONTAINS: "string_contains",
 } as const;
 
 /**
@@ -144,6 +163,7 @@ export const FILTER_OPERATORS = {
   GREATER_THAN: "gt",
   GREATER_THAN_OR_EQUAL: "gte",
   IN: "in",
+  CONTAINS: "contains",
 } as const;
 
 /**
@@ -160,6 +180,9 @@ export const FILTER_JSON_OPERATORS = {
   AND: "$and",
   OR: "$or",
   NOT: "$not",
+  // V4 operators
+  V4_AND: "AND",
+  V4_OR: "OR",
 } as const;
 
 /**

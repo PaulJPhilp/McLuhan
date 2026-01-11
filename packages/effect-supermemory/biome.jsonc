@@ -1,13 +1,9 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": [
-    "ultracite/core"
-  ],
+  "extends": ["ultracite/core"],
   "overrides": [
     {
-      "include": [
-        "*.md"
-      ],
+      "includes": ["*.md"],
       "linter": {
         "enabled": false
       }

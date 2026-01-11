@@ -3,10 +3,7 @@
  */
 
 import type { Effect } from "effect";
-import type {
-	ModelStreamResult,
-	MultiModelStreamOptions,
-} from "./types.js";
+import type { ModelStreamResult, MultiModelStreamOptions } from "./types.js";
 
 /**
  * Service API for multi-model streaming

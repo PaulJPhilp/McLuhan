@@ -20,6 +20,9 @@ export function createTestCodeArtifact(
 		metadata: {
 			title: "Example Function",
 			tags: ["example", "test"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 		...overrides,
 	};
@@ -77,9 +80,7 @@ export function createTestJsonArtifact(
 /**
  * Create a test SVG artifact
  */
-export function createTestSvgArtifact(
-	overrides?: Partial<Artifact>,
-): Artifact {
+export function createTestSvgArtifact(overrides?: Partial<Artifact>): Artifact {
 	return {
 		id: crypto.randomUUID(),
 		type: { category: "diagram", diagramType: "svg" },

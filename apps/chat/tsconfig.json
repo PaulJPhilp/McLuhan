@@ -17,7 +17,8 @@
 			"@/*": ["src/*"],
 			"effect-ai-sdk": ["../../packages/effect-ai-sdk/src/index.ts"],
 			"effect-actor": ["../../packages/effect-actor/src/index.ts"],
-			"effect-supermemory": ["../../packages/effect-supermemory/src/index.ts"]
+			"effect-supermemory": ["../../packages/effect-supermemory/src/index.ts"],
+			"effect-artifact": ["../../../Hume/packages/effect-artifact/src/index.ts"]
 		}
 	},
 	"include": ["src"]

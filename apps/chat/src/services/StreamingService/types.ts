@@ -31,13 +31,13 @@ export interface StreamState {
  */
 export interface StreamChatOptions {
 	readonly messages: readonly Message[];
-	readonly messageId?: string;
-	readonly modelProvider?: string;
-	readonly modelId?: string;
-	readonly onChunk?: OnChunkCallback;
-	readonly onComplete?: OnCompleteCallback;
-	readonly onError?: OnErrorCallback;
-	readonly timeoutMs?: number;
+	readonly messageId?: string | undefined;
+	readonly modelProvider?: string | undefined;
+	readonly modelId?: string | undefined;
+	readonly onChunk?: OnChunkCallback | undefined;
+	readonly onComplete?: OnCompleteCallback | undefined;
+	readonly onError?: OnErrorCallback | undefined;
+	readonly timeoutMs?: number | undefined;
 }
 
 /**

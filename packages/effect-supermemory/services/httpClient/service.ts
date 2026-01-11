@@ -1,6 +1,6 @@
-import { stringifyJson } from "@/utils/json.js";
 import type { HttpBody } from "@effect/platform/HttpBody";
 import { Effect, Stream } from "effect";
+import { stringifyJson } from "@/utils/json.js";
 
 import type { HttpClientApi } from "./api.js";
 import { type HttpClientError, NetworkError, RequestError } from "./errors.js";

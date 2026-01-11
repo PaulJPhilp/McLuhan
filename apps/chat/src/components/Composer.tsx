@@ -22,7 +22,10 @@ export const Composer: FC = () => {
 		setIsSending(true);
 
 		try {
-			await sendMessage(input, selectedModels.length > 0 ? selectedModels : undefined);
+			await sendMessage(
+				input,
+				selectedModels.length > 0 ? selectedModels : undefined,
+			);
 			setInput("");
 			// Reset textarea height
 			if (textareaRef.current) {

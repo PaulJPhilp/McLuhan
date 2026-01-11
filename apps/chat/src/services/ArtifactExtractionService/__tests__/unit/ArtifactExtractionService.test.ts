@@ -20,11 +20,15 @@ Hope that helps!`;
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("code");
-			expect(artifacts[0]?.type.language).toBe("typescript");
+			if (artifacts[0]?.type.category === "code") {
+				expect(artifacts[0].type.language).toBe("typescript");
+			}
 			expect(artifacts[0]?.content).toContain("function greet");
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should extract JSON artifacts", async () => {
@@ -46,11 +50,15 @@ Hope that helps!`;
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("data");
-			expect(artifacts[0]?.type.dataFormat).toBe("json");
+			if (artifacts[0]?.type.category === "data") {
+				expect(artifacts[0].type.dataFormat).toBe("json");
+			}
 			expect(artifacts[0]?.content).toContain("my-app");
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should extract Mermaid diagrams", async () => {
@@ -70,11 +78,15 @@ flowchart TD
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("diagram");
-			expect(artifacts[0]?.type.diagramType).toBe("mermaid");
+			if (artifacts[0]?.type.category === "diagram") {
+				expect(artifacts[0].type.diagramType).toBe("mermaid");
+			}
 			expect(artifacts[0]?.content).toContain("flowchart");
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should extract multiple artifacts", async () => {
@@ -96,11 +108,17 @@ And here's a JSON example:
 			const artifacts = yield* extraction.extractFromContent(content);
 
 			expect(artifacts).toHaveLength(2);
-			expect(artifacts[0]?.type.language).toBe("python");
-			expect(artifacts[1]?.type.dataFormat).toBe("json");
+			if (artifacts[0]?.type.category === "code") {
+				expect(artifacts[0].type.language).toBe("python");
+			}
+			if (artifacts[1]?.type.category === "data") {
+				expect(artifacts[1].type.dataFormat).toBe("json");
+			}
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should extract SVG artifacts", async () => {
@@ -118,14 +136,19 @@ And here's a JSON example:
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("diagram");
-			expect(artifacts[0]?.type.diagramType).toBe("svg");
+			if (artifacts[0]?.type.category === "diagram") {
+				expect(artifacts[0].type.diagramType).toBe("svg");
+			}
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should return empty array when no artifacts found", async () => {
-		const content = "This is just plain text without any code blocks or artifacts.";
+		const content =
+			"This is just plain text without any code blocks or artifacts.";
 
 		const program = Effect.gen(function* () {
 			const extraction = yield* ArtifactExtractionService;
@@ -134,7 +157,9 @@ And here's a JSON example:
 			expect(artifacts).toEqual([]);
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should include model metadata when provided", async () => {
@@ -151,11 +176,13 @@ console.log("test");
 			);
 
 			expect(artifacts).toHaveLength(1);
-			expect(artifacts[0]?.metadata.modelProvider).toBe("anthropic");
-			expect(artifacts[0]?.metadata.modelId).toBe("claude-3-sonnet");
+			expect(artifacts[0]?.metadata.modelInfo?.provider).toBe("anthropic");
+			expect(artifacts[0]?.metadata.modelInfo?.model).toBe("claude-3-sonnet");
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 
 	it("should handle nested code blocks", async () => {
@@ -176,6 +203,8 @@ function example() {
 			expect(artifacts[0]?.type.category).toBe("code");
 		});
 
-		await Effect.runPromise(program.pipe(Effect.provide(ArtifactExtractionService.Default())));
+		await Effect.runPromise(
+			program.pipe(Effect.provide(ArtifactExtractionService.Default())),
+		);
 	});
 });

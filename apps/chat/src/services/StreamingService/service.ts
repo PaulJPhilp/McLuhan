@@ -157,28 +157,26 @@ export class StreamingService extends Effect.Service<StreamingService>()(
 
 						// Extract and store artifacts if messageId is provided
 						if (messageId && content.length > 0) {
-							yield* Effect.gen(function* () {
-								try {
-									const artifacts = yield* artifactExtraction.extractFromContent(
-										content,
-										modelProvider,
-										modelId,
-									);
-
-									if (artifacts.length > 0) {
-										yield* artifactStorage.saveArtifacts(messageId, artifacts);
-										console.log(
-											`Extracted and stored ${artifacts.length} artifacts for message ${messageId}`,
-										);
-									}
-								} catch (error) {
+							yield* artifactExtraction
+								.extractFromContent(content, modelProvider, modelId)
+								.pipe(
+									Effect.flatMap((artifacts) =>
+										artifacts.length > 0
+											? artifactStorage.saveArtifacts(messageId, artifacts)
+											: Effect.void,
+									),
+									Effect.tap(() =>
+										console.log(`Artifact processing complete for ${messageId}`),
+									),
 									// Log but don't fail - artifact extraction shouldn't break streaming
-									console.warn(
-										"Failed to extract or store artifacts:",
-										error instanceof Error ? error.message : String(error),
-									);
-								}
-							});
+									Effect.catchAll((error) => {
+										console.warn(
+											"Failed to extract or store artifacts:",
+											error instanceof Error ? error.message : String(error),
+										);
+										return Effect.void;
+									}),
+								);
 						}
 
 						// Call onComplete callback if provided

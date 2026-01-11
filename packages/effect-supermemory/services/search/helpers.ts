@@ -24,7 +24,7 @@ export const buildSearchParams = (
     params[API_FIELD_NAMES.THRESHOLD] = options.threshold;
   }
 
-  if (options?.rerank) {
+  if (options?.rerank !== undefined) {
     params[API_FIELD_NAMES.RERANK] = options.rerank;
   }
 
@@ -43,6 +43,30 @@ export const buildSearchParams = (
     options.containerTags.length > 0
   ) {
     params[API_FIELD_NAMES.CONTAINER_TAGS] = options.containerTags;
+  }
+
+  if (options?.includeFullDocs !== undefined) {
+    params.includeFullDocs = options.includeFullDocs;
+  }
+
+  if (options?.includeSummary !== undefined) {
+    params.includeSummary = options.includeSummary;
+  }
+
+  if (options?.chunkThreshold !== undefined) {
+    params.chunkThreshold = options.chunkThreshold;
+  }
+
+  if (options?.docId !== undefined) {
+    params.docId = options.docId;
+  }
+
+  if (options?.rewriteQuery !== undefined) {
+    params.rewriteQuery = options.rewriteQuery;
+  }
+
+  if (options?.include !== undefined) {
+    params.include = options.include;
   }
 
   return params;

@@ -20,10 +20,12 @@ export function runEffect<A, E>(
 	effect: Effect.Effect<A, E>,
 	layer?: Layer.Layer<ArtifactExtractionService | ArtifactStorageService>,
 ): Promise<A> {
-	const testLayer = layer || Layer.mergeAll(
-		createMockArtifactExtractionService(),
-		createMockArtifactStorageService(),
-	);
+	const testLayer =
+		layer ||
+		Layer.mergeAll(
+			createMockArtifactExtractionService(),
+			createMockArtifactStorageService(),
+		);
 
 	const runtime = ManagedRuntime.make(testLayer);
 	return runtime.runPromise(effect);
@@ -36,10 +38,12 @@ export function runEffectSync<A, E>(
 	effect: Effect.Effect<A, E>,
 	layer?: Layer.Layer<ArtifactExtractionService | ArtifactStorageService>,
 ): A {
-	const testLayer = layer || Layer.mergeAll(
-		createMockArtifactExtractionService(),
-		createMockArtifactStorageService(),
-	);
+	const testLayer =
+		layer ||
+		Layer.mergeAll(
+			createMockArtifactExtractionService(),
+			createMockArtifactStorageService(),
+		);
 
 	const runtime = ManagedRuntime.make(testLayer);
 	return runtime.runSync(effect);
@@ -58,11 +62,9 @@ export async function testArtifactExtraction(
 		return yield* extraction.extractFromContent(content);
 	});
 
-	const testLayer = extractionLayer ||
-		createMockArtifactExtractionService() || Layer.empty;
-	const runtime = ManagedRuntime.make(
-		testLayer as any
-	);
+	const testLayer =
+		extractionLayer || createMockArtifactExtractionService() || Layer.empty;
+	const runtime = ManagedRuntime.make(testLayer as any);
 	const artifacts = await runtime.runPromise(program);
 
 	if (expectedCount !== undefined) {
@@ -85,8 +87,10 @@ export async function testArtifactStorage(
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
 ): Promise<{
 	saved: Artifact[];
-	retrieved: Artifact[];
-	stats: Awaited<ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>>;
+	retrieved: readonly Artifact[];
+	stats: Effect.Effect.Success<
+		ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>
+	>;
 }> {
 	const program = Effect.gen(function* () {
 		const storage = yield* ArtifactStorageService;
@@ -117,9 +121,11 @@ export async function testArtifactFlow(
 	extractionLayer?: Layer.Layer<ArtifactExtractionService>,
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
 ): Promise<{
-	extracted: Artifact[];
-	retrieved: Artifact[];
-	stats: Awaited<ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>>;
+	extracted: readonly Artifact[];
+	retrieved: readonly Artifact[];
+	stats: Effect.Effect.Success<
+		ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>
+	>;
 }> {
 	const program = Effect.gen(function* () {
 		const extraction = yield* ArtifactExtractionService;

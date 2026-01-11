@@ -13,7 +13,10 @@ export const MermaidArtifact: FC<MermaidArtifactProps> = ({ artifact }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	if (artifact.type.category !== "diagram" || artifact.type.diagramType !== "mermaid") {
+	if (
+		artifact.type.category !== "diagram" ||
+		artifact.type.diagramType !== "mermaid"
+	) {
 		return null;
 	}
 
