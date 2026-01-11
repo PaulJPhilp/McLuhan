@@ -7,11 +7,9 @@ import { ComputeProvider } from "../providers/compute.js";
 import { StorageProvider } from "../providers/storage.js";
 import { SpecRegistry } from "../spec/registry.js";
 import type { ActorSpec } from "../spec/types.js";
-import { ActorService, ActorServiceLive } from "./service.js";
+import { ActorService } from "./service.js";
+import { AuditLog } from "../audit.js";
 import type { ActorState } from "./types.js";
-
-// In-memory storage for specs in tests
-const testSpecRegistry = new Map<string, ActorSpec>();
 
 // In-memory storage for tests
 const createInMemoryStorageLayer = () => {
@@ -63,20 +61,6 @@ const createInMemoryStorageLayer = () => {
 
 // Helper to run Effect programs with fresh services
 const runTest = <A, E>(effect: Effect.Effect<A, E, any>) => {
-	// Clear specs for each test
-	testSpecRegistry.clear();
-
-	// Override SpecRegistry with test implementation
-	const testRegistryLayer = Layer.effect(SpecRegistry, Effect.succeed({
-		_tag: "effect-actor/SpecRegistry" as const,
-		register: (spec: ActorSpec) => Effect.sync(() => testSpecRegistry.set(spec.id, spec)),
-		get: (id: string) => testSpecRegistry.has(id)
-			? Effect.succeed(testSpecRegistry.get(id)!)
-			: Effect.fail(new SpecNotFoundError({ actorType: id, availableSpecs: Array.from(testSpecRegistry.keys()) })),
-		all: () => Effect.succeed(Array.from(testSpecRegistry.values())),
-		has: (id: string) => Effect.succeed(testSpecRegistry.has(id)),
-	}));
-
 	// Provide test storage (StorageProvider has no default)
 	const testStorageLayer = createInMemoryStorageLayer();
 
@@ -89,18 +73,24 @@ const runTest = <A, E>(effect: Effect.Effect<A, E, any>) => {
 			Effect.sync(() => Math.ceil(text.split(/\s+/).length / 200)),
 	}));
 
+	// Provide test AuditLog
+	const testAuditLogLayer = Layer.succeed(AuditLog, {
+		record: () => Effect.void,
+		query: () => Effect.succeed([]),
+		replay: () => Effect.fail(new Error("Not implemented")),
+	} as any);
+
 	// Create layers for each dependency
 	const depLayers = Layer.mergeAll(
 		testStorageLayer,
-		testRegistryLayer,
+		SpecRegistry.Default, // Use fresh real registry
 		testComputeLayer,
+		testAuditLogLayer,
 	);
 
 	// Create the full effect with all dependencies available
-	// Provide ActorServiceLive first (it depends on the dep layers)
-	// then provide the dependencies
 	const effect_with_deps = effect.pipe(
-		Effect.provide(ActorServiceLive),
+		Effect.provide(ActorService.Default),
 		Effect.provide(depLayers),
 	);
 
