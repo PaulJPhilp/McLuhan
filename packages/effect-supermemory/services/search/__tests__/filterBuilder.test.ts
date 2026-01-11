@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Filter, toJSON, type FilterExpression } from "../filterBuilder.js";
+import { Filter, type FilterExpression, toJSON } from "../filterBuilder.js";
 
 describe("Filter Builder", () => {
   describe("Filter.tag()", () => {
@@ -14,7 +14,11 @@ describe("Filter Builder", () => {
     it("serializes to JSON correctly", () => {
       const filter = Filter.tag("archived");
       const json = toJSON(filter);
-      expect(json).toEqual({ tag: "archived" });
+      expect(json).toEqual({
+        key: "tags",
+        value: "archived",
+        filterType: "array_contains",
+      });
     });
   });
 
@@ -24,7 +28,7 @@ describe("Filter Builder", () => {
       expect(filter).toEqual({
         _tag: "MetadataFilter",
         field: "author",
-        operator: "eq",
+        negate: undefined,
         value: "Paul",
       });
     });
@@ -32,57 +36,97 @@ describe("Filter Builder", () => {
     it("serializes eq operator correctly", () => {
       const filter = Filter.meta("author", "eq", "Paul");
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.author": "Paul" });
+      expect(json).toEqual({
+        key: "author",
+        value: "Paul",
+        filterType: "metadata",
+      });
     });
 
     it("serializes ne operator correctly", () => {
       const filter = Filter.meta("status", "ne", "deleted");
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.status": { $ne: "deleted" } });
+      expect(json).toEqual({
+        key: "status",
+        value: "deleted",
+        filterType: "metadata",
+        negate: true,
+      });
     });
 
     it("serializes lt operator correctly", () => {
       const filter = Filter.meta("age", "lt", 18);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.age": { $lt: 18 } });
+      expect(json).toEqual({
+        key: "age",
+        value: "18",
+        filterType: "numeric",
+        numericOperator: "<",
+      });
     });
 
     it("serializes lte operator correctly", () => {
       const filter = Filter.meta("age", "lte", 65);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.age": { $lte: 65 } });
+      expect(json).toEqual({
+        key: "age",
+        value: "65",
+        filterType: "numeric",
+        numericOperator: "<=",
+      });
     });
 
     it("serializes gt operator correctly", () => {
       const filter = Filter.meta("score", "gt", 0.5);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.score": { $gt: 0.5 } });
+      expect(json).toEqual({
+        key: "score",
+        value: "0.5",
+        filterType: "numeric",
+        numericOperator: ">",
+      });
     });
 
     it("serializes gte operator correctly", () => {
       const filter = Filter.meta("score", "gte", 0.8);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.score": { $gte: 0.8 } });
+      expect(json).toEqual({
+        key: "score",
+        value: "0.8",
+        filterType: "numeric",
+        numericOperator: ">=",
+      });
     });
 
     it("serializes in operator correctly", () => {
       const filter = Filter.meta("category", "in", ["books", "movies"]);
       const json = toJSON(filter);
       expect(json).toEqual({
-        "metadata.category": { $in: ["books", "movies"] },
+        key: "category",
+        value: "books",
+        filterType: "array_contains",
       });
     });
 
     it("handles boolean values", () => {
       const filter = Filter.meta("published", "eq", true);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.published": true });
+      expect(json).toEqual({
+        key: "published",
+        value: "true",
+        filterType: "metadata",
+      });
     });
 
     it("handles number values", () => {
       const filter = Filter.meta("count", "eq", 42);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.count": 42 });
+      expect(json).toEqual({
+        key: "count",
+        value: "42",
+        filterType: "numeric",
+        numericOperator: "=",
+      });
     });
   });
 
@@ -127,20 +171,43 @@ describe("Filter Builder", () => {
       const filter = Filter.scoreRange(0.5, 1.0);
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [{ score: { $gte: 0.5 } }, { score: { $lte: 1.0 } }],
+        AND: [
+          {
+            key: "score",
+            value: "0.5",
+            filterType: "numeric",
+            numericOperator: ">=",
+          },
+          {
+            key: "score",
+            value: "1",
+            filterType: "numeric",
+            numericOperator: "<=",
+          },
+        ],
       });
     });
 
     it("serializes scoreRange with only min", () => {
       const filter = Filter.scoreRange(0.7);
       const json = toJSON(filter);
-      expect(json).toEqual({ score: { $gte: 0.7 } });
+      expect(json).toEqual({
+        key: "score",
+        value: "0.7",
+        filterType: "numeric",
+        numericOperator: ">=",
+      });
     });
 
     it("serializes scoreRange with only max", () => {
       const filter = Filter.scoreRange(undefined, 0.9);
       const json = toJSON(filter);
-      expect(json).toEqual({ score: { $lte: 0.9 } });
+      expect(json).toEqual({
+        key: "score",
+        value: "0.9",
+        filterType: "numeric",
+        numericOperator: "<=",
+      });
     });
 
     it("serializes scoreRange with no bounds as empty object", () => {
@@ -161,10 +228,11 @@ describe("Filter Builder", () => {
         conditions: [
           { _tag: "TagFilter", value: "archived" },
           {
-            _tag: "MetadataFilter",
+            _tag: "NumericFilter",
             field: "version",
-            operator: "gt",
+            operator: ">",
             value: 2,
+            negate: undefined,
           },
         ],
       });
@@ -177,7 +245,15 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [{ tag: "archived" }, { "metadata.version": { $gt: 2 } }],
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          {
+            key: "version",
+            value: "2",
+            filterType: "numeric",
+            numericOperator: ">",
+          },
+        ],
       });
     });
 
@@ -189,10 +265,15 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [
-          { tag: "archived" },
-          { "metadata.author": "Paul" },
-          { score: { $gte: 0.8 } },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          { key: "author", value: "Paul", filterType: "metadata" },
+          {
+            key: "score",
+            value: "0.8",
+            filterType: "numeric",
+            numericOperator: ">=",
+          },
         ],
       });
     });
@@ -204,10 +285,18 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [
-          { tag: "archived" },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
           {
-            $and: [{ "metadata.author": "Paul" }, { score: { $gte: 0.8 } }],
+            AND: [
+              { key: "author", value: "Paul", filterType: "metadata" },
+              {
+                key: "score",
+                value: "0.8",
+                filterType: "numeric",
+                numericOperator: ">=",
+              },
+            ],
           },
         ],
       });
@@ -230,7 +319,10 @@ describe("Filter Builder", () => {
       const filter = Filter.or(Filter.tag("draft"), Filter.tag("archived"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $or: [{ tag: "draft" }, { tag: "archived" }],
+        OR: [
+          { key: "tags", value: "draft", filterType: "array_contains" },
+          { key: "tags", value: "archived", filterType: "array_contains" },
+        ],
       });
     });
 
@@ -242,10 +334,10 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $or: [
-          { tag: "draft" },
-          { tag: "archived" },
-          { "metadata.status": "published" },
+        OR: [
+          { key: "tags", value: "draft", filterType: "array_contains" },
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          { key: "status", value: "published", filterType: "metadata" },
         ],
       });
     });
@@ -264,7 +356,10 @@ describe("Filter Builder", () => {
       const filter = Filter.not(Filter.tag("archived"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $not: { tag: "archived" },
+        key: "tags",
+        value: "archived",
+        filterType: "array_contains",
+        negate: true,
       });
     });
 
@@ -274,9 +369,16 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $not: {
-          $and: [{ tag: "archived" }, { "metadata.version": { $gt: 2 } }],
-        },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          {
+            key: "version",
+            value: "2",
+            filterType: "numeric",
+            numericOperator: ">",
+          },
+        ],
+        negate: true,
       });
     });
   });
@@ -292,12 +394,12 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [
-          { tag: "archived" },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
           {
-            $or: [
-              { "metadata.author": "Paul" },
-              { "metadata.author": "Alice" },
+            OR: [
+              { key: "author", value: "Paul", filterType: "metadata" },
+              { key: "author", value: "Alice", filterType: "metadata" },
             ],
           },
         ],
@@ -314,13 +416,22 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $not: {
-          $and: [
-            { tag: "archived" },
-            { "metadata.version": { $gt: 2 } },
-            { score: { $gte: 0.8 } },
-          ],
-        },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          {
+            key: "version",
+            value: "2",
+            filterType: "numeric",
+            numericOperator: ">",
+          },
+          {
+            key: "score",
+            value: "0.8",
+            filterType: "numeric",
+            numericOperator: ">=",
+          },
+        ],
+        negate: true,
       });
     });
 
@@ -340,17 +451,30 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [
-          { tag: "archived" },
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
           {
-            $or: [
+            OR: [
               {
-                $and: [{ "metadata.author": "Paul" }, { score: { $gte: 0.8 } }],
+                AND: [
+                  { key: "author", value: "Paul", filterType: "metadata" },
+                  {
+                    key: "score",
+                    value: "0.8",
+                    filterType: "numeric",
+                    numericOperator: ">=",
+                  },
+                ],
               },
               {
-                $and: [
-                  { "metadata.author": "Alice" },
-                  { score: { $gte: 0.9 } },
+                AND: [
+                  { key: "author", value: "Alice", filterType: "metadata" },
+                  {
+                    key: "score",
+                    value: "0.9",
+                    filterType: "numeric",
+                    numericOperator: ">=",
+                  },
                 ],
               },
             ],
@@ -367,7 +491,7 @@ describe("Filter Builder", () => {
         conditions: [],
       };
       const json = toJSON(filter);
-      expect(json).toEqual({ $and: [] });
+      expect(json).toEqual({ AND: [] });
     });
 
     it("handles empty OrFilter", () => {
@@ -376,14 +500,14 @@ describe("Filter Builder", () => {
         conditions: [],
       };
       const json = toJSON(filter);
-      expect(json).toEqual({ $or: [] });
+      expect(json).toEqual({ OR: [] });
     });
 
     it("handles single condition AndFilter", () => {
       const filter = Filter.and(Filter.tag("archived"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [{ tag: "archived" }],
+        AND: [{ key: "tags", value: "archived", filterType: "array_contains" }],
       });
     });
 
@@ -391,7 +515,7 @@ describe("Filter Builder", () => {
       const filter = Filter.or(Filter.tag("archived"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $or: [{ tag: "archived" }],
+        OR: [{ key: "tags", value: "archived", filterType: "array_contains" }],
       });
     });
   });

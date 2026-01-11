@@ -1,6 +1,9 @@
 import { Effect } from "effect";
 import { FC, useEffect, useState } from "react";
-import { ModelConfigService, getModelColor } from "../services/ModelConfigService/index.js";
+import {
+	ModelConfigService,
+	getModelColor,
+} from "../services/ModelConfigService/index.js";
 import type { ModelInfo } from "../services/ModelConfigService/index.js";
 import { sharedRuntime } from "../context/atomRuntime.js";
 
@@ -30,9 +33,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 
 			try {
 				const models = await sharedRuntime.runPromise(
-					program.pipe(
-						Effect.provide(ModelConfigService.Default()),
-					),
+					program.pipe(Effect.provide(ModelConfigService.Default())),
 				);
 				// Show all models, but indicate which ones need API keys
 				setAvailableModels(models);
@@ -68,9 +69,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 	);
 
 	if (isLoading) {
-		return (
-			<div className="mb-2 text-xs text-gray-500">Loading models...</div>
-		);
+		return <div className="mb-2 text-xs text-gray-500">Loading models...</div>;
 	}
 
 	if (availableModels.length === 0) {
@@ -89,10 +88,10 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 				className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
 			>
 				<span>
-									{selectedModels.length === 0
-										? "Select models"
-										: `${selectedModels.length} model${selectedModels.length === 1 ? "" : "s"} selected`}
-								</span>
+					{selectedModels.length === 0
+						? "Select models"
+						: `${selectedModels.length} model${selectedModels.length === 1 ? "" : "s"} selected`}
+				</span>
 				<span>{isExpanded ? "▼" : "▶"}</span>
 			</button>
 
@@ -129,7 +128,11 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
 												className="w-3 h-3 rounded border border-gray-300"
 												style={{ backgroundColor: modelColor.bg }}
 											/>
-											<span className={isDisabled ? "text-gray-400" : "text-gray-700"}>
+											<span
+												className={
+													isDisabled ? "text-gray-400" : "text-gray-700"
+												}
+											>
 												{model.displayName}
 											</span>
 											{isDisabled && (

@@ -42,7 +42,7 @@
     "@types/ws": "^8.18.1",
     "effect": "^3.19.14",
     "openapi-typescript": "^7.10.1",
-    "supermemory": "3.10.0",
+    "supermemory": "4.0.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
     "ultracite": "6.3.6",
@@ -51,7 +51,7 @@
   "dependencies": {
     "@effect/platform": "^0.93.8",
     "@effect/schema": "^0.75.5",
-    "effect-env": "^0.1.1",
+    "effect-env": "^0.4.1",
     "effect-json": "^0.2.0",
     "jsonc-parser": "^3.3.1"
   }

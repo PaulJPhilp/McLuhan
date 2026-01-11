@@ -82,10 +82,7 @@ function createModelForProvider(
 		}
 
 		// Create provider instance
-		const providerInstance = yield* createProvider(
-			provider as any,
-			{ apiKey },
-		);
+		const providerInstance = yield* createProvider(provider as any, { apiKey });
 
 		// Get language model
 		const model = yield* getLanguageModel(providerInstance, modelId);
@@ -141,7 +138,10 @@ function streamSingleModel(
 						error,
 					);
 					if (error instanceof Error) {
-						console.error(`[${modelConfig.provider}] Error stack:`, error.stack);
+						console.error(
+							`[${modelConfig.provider}] Error stack:`,
+							error.stack,
+						);
 						console.error(`[${modelConfig.provider}] Error name:`, error.name);
 					}
 					console.error(
@@ -262,7 +262,10 @@ function streamSingleModel(
 						// Usage might not be available, ignore
 					}
 
-					return { content: localAccumulatedContent, chunkCount: localChunkCount };
+					return {
+						content: localAccumulatedContent,
+						chunkCount: localChunkCount,
+					};
 				})();
 
 				// Race between stream and timeout
@@ -342,7 +345,7 @@ function streamSingleModel(
 			provider: modelConfig.provider,
 			content: accumulatedContent,
 			success,
-			...(errorMessage ? { error: errorMessage } : {}),
+			error: errorMessage as string | undefined,
 			durationMs,
 			chunkCount,
 			metrics: {

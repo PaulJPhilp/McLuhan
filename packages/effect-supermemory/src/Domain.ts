@@ -175,6 +175,40 @@ export const SearchOptions = Schema.Struct({
    * Container tags to filter search results (multiple tags, for v3 search endpoint).
    */
   containerTags: Schema.optional(Schema.Array(Schema.String)),
+
+  /**
+   * If true, include full document in the response.
+   */
+  includeFullDocs: Schema.optional(Schema.Boolean),
+
+  /**
+   * If true, include document summary in the response.
+   */
+  includeSummary: Schema.optional(Schema.Boolean),
+
+  /**
+   * Threshold / sensitivity for chunk selection.
+   */
+  chunkThreshold: Schema.optional(Schema.Number),
+
+  /**
+   * Optional document ID to search within.
+   */
+  docId: Schema.optional(Schema.String),
+
+  /**
+   * If true, rewrites the query to make it easier to find documents.
+   */
+  rewriteQuery: Schema.optional(Schema.Boolean),
+
+  /**
+   * Additional inclusion options.
+   */
+  include: Schema.optional(
+    Schema.Struct({
+      forgottenMemories: Schema.optional(Schema.Boolean),
+    })
+  ),
 });
 export type SearchOptions = Schema.Schema.Type<typeof SearchOptions>;
 

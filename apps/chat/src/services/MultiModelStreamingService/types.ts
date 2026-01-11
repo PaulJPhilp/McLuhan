@@ -15,7 +15,7 @@ export interface ModelStreamResult {
 	readonly provider: string;
 	readonly content: string;
 	readonly success: boolean;
-	readonly error?: string;
+	readonly error?: string | undefined;
 	readonly durationMs: number;
 	readonly chunkCount: number;
 	readonly metrics: ModelStreamMetrics;

@@ -5,14 +5,23 @@
  * @module MemoriesApi
  */
 
-import type { SupermemoryError } from "@/Errors.js";
 import type * as Effect from "effect/Effect";
+import type { SupermemoryError } from "@/Errors.js";
 import type {
   Memory,
   MemoryAddParams,
   MemoryAddResponse,
+  MemoryBatchAddParams,
+  MemoryBatchAddResponse,
+  MemoryDeleteBulkParams,
+  MemoryDeleteBulkResponse,
+  MemoryForgetParams,
+  MemoryForgetResponse,
   MemoryListParams,
+  MemoryListProcessingResponse,
   MemoryListResponse,
+  MemoryUpdateMemoryParams,
+  MemoryUpdateMemoryResponse,
   MemoryUpdateParams,
   MemoryUpdateResponse,
   MemoryUploadFileParams,
@@ -23,7 +32,7 @@ import type {
  * API interface for the Memories service.
  *
  * Provides methods for managing memories (documents) in Supermemory.
- * Based on the official Supermemory SDK v3.10.0.
+ * Based on the official Supermemory SDK v4.0.0.
  *
  * @since 1.0.0
  */
@@ -47,6 +56,15 @@ export type MemoriesServiceApi = {
   readonly add: (
     params: MemoryAddParams
   ) => Effect.Effect<MemoryAddResponse, SupermemoryError>;
+
+  /**
+   * Add multiple documents in a single request.
+   *
+   * @since 4.0.0
+   */
+  readonly batchAdd: (
+    params: MemoryBatchAddParams
+  ) => Effect.Effect<MemoryBatchAddResponse, SupermemoryError>;
 
   /**
    * Get a memory/document by ID.
@@ -87,6 +105,16 @@ export type MemoriesServiceApi = {
   ) => Effect.Effect<MemoryListResponse, SupermemoryError>;
 
   /**
+   * Get documents that are currently being processed.
+   *
+   * @since 4.0.0
+   */
+  readonly listProcessing: () => Effect.Effect<
+    MemoryListProcessingResponse,
+    SupermemoryError
+  >;
+
+  /**
    * Update an existing memory/document.
    *
    * @param id - The memory ID to update
@@ -107,6 +135,15 @@ export type MemoriesServiceApi = {
   ) => Effect.Effect<MemoryUpdateResponse, SupermemoryError>;
 
   /**
+   * Update a memory by creating a new version (v4 API).
+   *
+   * @since 4.0.0
+   */
+  readonly updateMemory: (
+    params: MemoryUpdateMemoryParams
+  ) => Effect.Effect<MemoryUpdateMemoryResponse, SupermemoryError>;
+
+  /**
    * Delete a memory/document by ID.
    *
    * @param id - The memory ID or customId to delete
@@ -118,6 +155,24 @@ export type MemoriesServiceApi = {
    * ```
    */
   readonly delete: (id: string) => Effect.Effect<void, SupermemoryError>;
+
+  /**
+   * Bulk delete documents by IDs or container tags.
+   *
+   * @since 4.0.0
+   */
+  readonly deleteBulk: (
+    params: MemoryDeleteBulkParams
+  ) => Effect.Effect<MemoryDeleteBulkResponse, SupermemoryError>;
+
+  /**
+   * Forget (soft delete) a memory entry (v4 API).
+   *
+   * @since 4.0.0
+   */
+  readonly forget: (
+    params: MemoryForgetParams
+  ) => Effect.Effect<MemoryForgetResponse, SupermemoryError>;
 
   /**
    * Upload a file to be processed as a memory.

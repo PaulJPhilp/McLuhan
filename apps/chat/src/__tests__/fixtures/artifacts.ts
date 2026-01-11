@@ -77,9 +77,7 @@ export function createTestJsonArtifact(
 /**
  * Create a test SVG artifact
  */
-export function createTestSvgArtifact(
-	overrides?: Partial<Artifact>,
-): Artifact {
+export function createTestSvgArtifact(overrides?: Partial<Artifact>): Artifact {
 	return {
 		id: crypto.randomUUID(),
 		type: { category: "diagram", diagramType: "svg" },

@@ -267,57 +267,27 @@ export const buildXStateMachine = (spec: ActorSpec) => {
 
 ---
 
+## Terminology: "Actor" in effect-actor
+
+An "actor" in effect-actor refers to a **single instance of a state machine** with:
+- Immutable specification (schema, states, guards, actions)
+- Mutable runtime state (current state + context)
+- Persistent audit trail
+- Independent lifecycle
+
+Example: Actor type "hiring-candidate", instance "alice-42"
+
+### What effect-actor does NOT provide (v1)
+
+- Actor-to-actor messaging (use Effect channels for IPC)
+- Supervision trees (implement in your orchestration layer)
+- Distributed coordination (use external systems like Kafka)
+
+These are possible extensions for v2+, but v1 focuses on single-entity orchestration.
+
+---
+
 ## High-Level Design
-
-┌─────────────────────────────────────────────────────────────┐
-
-│                    Public API Layer                          │
-
-│  (ActorService, Class Wrappers, Query Interface)            │
-
-└────────────────┬────────────────────────────────────────────┘
-
-│
-
-┌────────────────┴────────────────────────────────────────────┐
-
-│          Specification & Validation Layer                    │
-
-│  (ActorSpec, Guard Evaluation, State Validation)            │
-
-└────────────────┬────────────────────────────────────────────┘
-
-│
-
-┌────────────────┴────────────────────────────────────────────┐
-
-│            State Machine Execution Layer                     │
-
-│  (xState Runner, Transition Logic, Context Transformation) │
-
-└────────────────┬────────────────────────────────────────────┘
-
-│
-
-┌────────────────┴────────────────────────────────────────────┐
-
-│              Provider Layer (Effects)                        │
-
-│  ┌──────────────┬──────────────┬──────────────┐             │
-
-│  │   Storage    │   Compute    │   Policy     │             │
-
-│  │  Provider    │  Provider    │  Provider    │             │
-
-│  └──────────────┴──────────────┴──────────────┘             │
-
-│  ┌──────────────────────────────────────────┐               │
-
-│  │   Observability Provider (Logging, etc)  │               │
-
-│  └──────────────────────────────────────────┘               │
-
-└─────────────────────────────────────────────────────────────┘
 
 ---
 
@@ -566,52 +536,7 @@ export class SpecRegistry extends Effect.Service<SpecRegistry>()(
 
 3. State Machine Execution Layer
 
-
-Module: src/machine/executor.ts, src/machine/transition.ts
-
-A. xState Integration
-
-import { createMachine, interpret } from "xstate";
-
-export const buildxStateMachine = (spec: ActorSpec) => {
-  const config = {
-    id: spec.id,
-    initial: spec.initial,
-    schema: {
-      context: {} as Schema.Schema.Type<typeof spec.schema>,
-    },
-    states: Object.entries(spec.states).reduce(
-      (acc, [stateName, stateDef]) => {
-        acc[stateName] = {
-          on: Object.entries(stateDef.on ?? {}).reduce(
-            (events, [eventName, transition]) => {
-              const target = typeof transition === "string" 
-                ? transition 
-                : transition.target;
-              
-              events[eventName] = {
-                target,
-                guard: typeof transition === "string"
-                  ? undefined
-                  : transition.guard,
-                actions: typeof transition === "string"
-                  ? undefined
-                  : transition.action,
-              };
-              return events;
-            },
-            {} as Record<string, any>
-          ),
-        };
-        return acc;
-      },
-      {} as Record<string, any>
-    ),
-  };
-  
-  return createMachine(config);
-};
-
+Module: src/machine/transition.ts
 
 export const executeCommand = (
   spec: ActorSpec,

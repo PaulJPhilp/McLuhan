@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**effect-actor** is a composable, Effect-native actor orchestration kernel with statechart semantics. It enables developers to build robust, type-safe, auditable state machines for managing entity lifecycles (content workflows, hiring pipelines, feature rollouts, etc.) with pluggable providers for storage, computation, policy, and observability.
+**effect-actor** is an Effect-native state machine orchestration framework for managing entity lifecycles with specification-driven design, pluggable providers, and built-in audit trails. It enables developers to build robust, type-safe, auditable state machines for entities (content workflows, hiring pipelines, feature rollouts, etc.) with pluggable providers for storage, computation, policy, and observability.
 
 ### The Problem
 
@@ -24,7 +24,7 @@ There's no principled, composable, Effect-native way to orchestrate entity state
 ### The Solution
 
 **effect-actor** provides:
-- **Actor model** on top of xState statecharts (type-safe, composable state machines)
+- **State machine orchestration** with statechart semantics (type-safe, composable)
 - **Effect-native execution** (lazy, observable, testable, error-channel semantics)
 - **Pluggable providers** (Storage, Compute, Policy, Observability)
 - **Dual API** (Effect.Service for power users, Class wrapper for non-Effect developers)
@@ -74,28 +74,26 @@ There's no principled, composable, Effect-native way to orchestrate entity state
 ### Market Position
 - **Not a replacement for**: Temporal, Durable Functions (different scale/complexity)
 - **Not a replacement for**: Apache Airflow (different use case; Airflow is DAG-based)
-- **Complements**: Effect ecosystem, xState, Zod/Effect.Schema
-- **Competes with**: Home-grown state machines, Redux, simple state management
+- **Complements**: Effect ecosystem, Zod/Effect.Schema
+- **Competes with**: Home-grown state machines, Redux, simple state management, xState
 - **Integrates with**: effect-json (persistence), effect-env (config), Notion, databases
 
 ### Competitive Advantages
 1. **Effect-native** — First-class Effect integration; lazy, composable, observable
-2. **xState-powered** — Battle-tested statechart execution engine
-3. **Dual API** — Effect.Service for power, Class wrapper for simplicity
-4. **Specification-driven** — TypeScript specs, not YAML or configuration
-5. **Actor model** — Clean semantics; distributed-ready patterns
-6. **Pluggable providers** — Storage, Compute, Policy, Observability all swappable
-7. **Audit trail built-in** — Event sourcing patterns native to design
-8. **Agent-ready** — Clear contracts, testable, easy to extend
+2. **Specification-driven** — TypeScript specs, not YAML or configuration
+3. **Provider architecture** — Storage, Compute, Policy all swappable
+4. **Clean semantics** — Statechart model without external weight
+5. **Audit trail built-in** — Event sourcing patterns native to design
+6. **Agent-ready** — Clear contracts, testable, easy to extend
 
 ---
 
 ## Success Criteria
 
 ### Functional
-- [ ] Define statechart specs as TypeScript objects
+- [ ] Define state machine specs as TypeScript objects
 - [ ] Execute state transitions with typed guards and actions
-- [ ] Persist actor state via pluggable storage providers
+- [ ] Persist state via pluggable storage providers
 - [ ] Support loops, conditionals, and state nesting (v1+)
 - [ ] Provide audit trail of all transitions
 - [ ] Support multi-actor coordination (workflow orchestration)
@@ -103,7 +101,7 @@ There's no principled, composable, Effect-native way to orchestrate entity state
 ### Non-Functional
 - [ ] All operations Effect-native (lazy, composable, observable)
 - [ ] Full TypeScript strict mode compliance
-- [ ] Zero external dependencies (except Effect, xState)
+- [ ] Zero external dependencies (except Effect)
 - [ ] ≥90% test coverage (unit + integration + golden)
 - [ ] Agent-parseable documentation (clear, machine-readable specs)
 - [ ] Sub-millisecond state transitions (in-memory)
@@ -131,17 +129,17 @@ There's no principled, composable, Effect-native way to orchestrate entity state
 
 ## Timeline & Phasing
 
-- **Phase 1**: Core ActorSDK (xState integration, Effect.Service, Class API, basic providers)
+- **Phase 1**: Core StateMachine SDK (Effect-native executor, Effect.Service, Class API, basic providers)
 - **Phase 2**: Golden fixtures, ARCHITECTURE.md, error recovery patterns, integration examples
-- **Phase 3**: Integration with effect-env, effect-xstate, CLI, HTTP server, MCP
+- **Phase 3**: Integration with effect-env, CLI, HTTP server, MCP
 - **Phase 4+**: Advanced features (parallel states, nested, sagas, distributed)
 
 ---
 
 ## Success Metrics (Post-Launch)
 
-- effect-env and effect-xstate CLI adopt effect-xstate for workflow management
-- Writing Buddy uses effect-xstate for editorial workflows
+- effect-env and CLI adopt effect-actor for workflow management
+- Writing Buddy uses effect-actor for editorial workflows
 - Agents can implement new actor types without clarifying questions
 - Community contributions: new actor types, provider implementations
 - ≥500 npm weekly downloads (month 3)

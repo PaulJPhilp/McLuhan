@@ -9,7 +9,10 @@ interface SvgArtifactProps {
  * SvgArtifact - Renders SVG diagrams
  */
 export const SvgArtifact: FC<SvgArtifactProps> = ({ artifact }) => {
-	if (artifact.type.category !== "diagram" || artifact.type.diagramType !== "svg") {
+	if (
+		artifact.type.category !== "diagram" ||
+		artifact.type.diagramType !== "svg"
+	) {
 		return null;
 	}
 

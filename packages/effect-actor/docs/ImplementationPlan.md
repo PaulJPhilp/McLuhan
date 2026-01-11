@@ -6,47 +6,46 @@ effect-actor – Implementation Plan
 
 ---
 
-## Phase 1: Core Actor SDK (Weeks 1-2)
+## Phase 1: Core State Machine SDK (Weeks 1-2)
 
 ### Deliverables
 
 **Core Infrastructure**
-- [ ] Project structure (Turborepo, Bun setup, Biome config, TypeScript)
-- [ ] Package.json with dependencies (Effect, xState)
-- [ ] Build pipeline (Vite, TypeScript declarations)
-- [ ] Test infrastructure (Vitest, Happy DOM, coverage)
+- [x] Project structure (Turborepo, Bun setup, Biome config, TypeScript)
+- [x] Package.json with dependencies (Effect)
+- [x] Build pipeline (Vite, TypeScript declarations)
+- [x] Test infrastructure (Vitest, Happy DOM, coverage)
 
 **Spec System**
-- [ ] ActorSpec type definitions (`src/spec/types.ts`)
-- [ ] Spec builder helper (`createActorSpec`)
-- [ ] Spec validator (validate states, transitions, guards, actions)
-- [ ] SpecRegistry service
+- [x] ActorSpec type definitions (`src/spec/types.ts`)
+- [x] Spec builder helper (`createActorSpec`)
+- [x] Spec validator (validate states, transitions, guards, actions)
+- [x] SpecRegistry service
 
 **State Machine Execution**
-- [ ] xState machine builder (convert ActorSpec to xState config)
-- [ ] Transition executor (guard evaluation, action execution, context transformation)
-- [ ] TransitionResult type
+- [x] Transition executor (guard evaluation, action execution, context transformation)
+- [x] TransitionResult type
 
 **Core Services (Effect.Service)**
-- [ ] ActorService main orchestrator
+- [x] ActorService main orchestrator
   - `execute(command)` – Execute command, persist state, record audit
   - `query(actorType, actorId)` – Get current state
   - `list(actorType, filter)` – List actors by status, date, etc.
   - `getHistory(actorType, actorId)` – Get audit trail
   - `canTransition(actorType, actorId, event)` – Check if transition allowed
   - `getSpec(actorType)` – Get actor spec
-- [ ] StorageProvider interface (save, load, query, getHistory)
-- [ ] ComputeProvider service (now, uuid, estimateReadingTime)
-- [ ] PolicyProvider service (canExecute, retryPolicy, rateLimitPolicy)
+- [x] StorageProvider interface (save, load, query, getHistory)
+- [x] ComputeProvider service (now, uuid, estimateReadingTime)
+- [x] PolicyProvider service (canExecute, retryPolicy, rateLimitPolicy)
 
 **Error Types**
-- [ ] ActorError (base)
-- [ ] GuardFailedError
-- [ ] TransitionNotAllowedError
-- [ ] ValidationError
-- [ ] StorageError
-- [ ] SpecError
-- [ ] All tagged with Data.TaggedError
+- [x] ActorError (base)
+- [x] GuardFailedError
+- [x] TransitionNotAllowedError
+- [x] ValidationError
+- [x] StorageError
+- [x] SpecError
+- [x] All tagged with Data.TaggedError
 
 **Class API (Promise Bridge)**
 - [ ] ActorWrapper base class
@@ -54,10 +53,10 @@ effect-actor – Implementation Plan
 - [ ] HiringPipelineActor (example)
 
 **Storage Backend (fs-json)**
-- [ ] FsJsonStorageProvider implementation
-- [ ] Directory structure for actor state
-- [ ] Audit trail persistence
-- [ ] Query filtering
+- [x] FsJsonStorageProvider implementation
+- [x] Directory structure for actor state
+- [x] Audit trail persistence
+- [x] Query filtering
 
 **Audit Trail**
 - [ ] AuditEntry type
@@ -66,176 +65,84 @@ effect-actor – Implementation Plan
 - [ ] History querying
 
 **Unit Tests**
-- [ ] Spec builder tests
-- [ ] Spec validator tests
-- [ ] xState machine executor tests
-- [ ] Guard evaluation tests
-- [ ] Action execution tests
-- [ ] Error handling tests
-- [ ] Storage provider tests
-- [ ] ≥70% coverage
+- [x] Spec builder tests
+- [x] Spec validator tests
+- [x] State machine executor tests
+- [x] Guard evaluation tests
+- [x] Action execution tests
+- [x] Error handling tests
+- [x] Storage provider tests
+- [x] ≥70% coverage
 
 **Documentation**
-- [ ] README with quick start
-- [ ] Basic API overview
+- [x] README with quick start
+- [x] Basic API overview
 - [ ] Example: Content workflow
 - [ ] Error handling guide
 
-### Key Files to Create
+### Key Files
 
-packages/effect-xstate/
-
+packages/effect-actor/
 ├── src/
-
 │   ├── index.ts                     # Main exports
-
 │   ├── actor/
-
 │   │   ├── index.ts
-
 │   │   ├── service.ts               # ActorService
-
 │   │   ├── wrapper.ts               # ActorWrapper base class
-
-│   │   ├── content.ts               # ContentProductionActor
-
-│   │   ├── hiring.ts                # HiringPipelineActor
-
 │   │   └── types.ts                 # Command, ActorState, etc.
-
 │   ├── spec/
-
 │   │   ├── index.ts
-
 │   │   ├── builder.ts               # createActorSpec
-
 │   │   ├── validator.ts             # validateSpec
-
 │   │   ├── registry.ts              # SpecRegistry service
-
 │   │   └── types.ts                 # ActorSpec, StateDefinition, etc.
-
 │   ├── machine/
-
 │   │   ├── index.ts
-
-│   │   ├── executor.ts              # xState setup, transition logic
-
 │   │   ├── transition.ts            # Guard/action execution
-
 │   │   └── types.ts                 # TransitionResult, etc.
-
 │   ├── providers/
-
 │   │   ├── index.ts
-
 │   │   ├── storage.ts               # StorageProvider interface
-
 │   │   ├── compute.ts               # ComputeProvider service
-
 │   │   ├── policy.ts                # PolicyProvider service
-
 │   │   └── backends/
-
 │   │       └── fs-json.ts           # FsJsonStorageProvider
-
 │   ├── errors.ts                    # All error types
-
 │   ├── audit.ts                     # AuditEntry, AuditLog service
-
 │   ├── observability.ts             # Logging/metrics helpers
-
-│   └── tests/
-
+│   └── __tests__/
 │       ├── unit/
-
-│       │   ├── spec.test.ts
-
-│       │   ├── machine.test.ts
-
-│       │   ├── actor.test.ts
-
-│       │   ├── providers.test.ts
-
-│       │   └── errors.test.ts
-
 │       ├── integration/
-
-│       │   └── workflows.test.ts
-
 │       └── setup.ts
-
 ├── package.json
-
 ├── tsconfig.json
-
 ├── vitest.config.ts
-
 ├── biome.jsonc
-
 └── README.md
 
+### Success Criteria
 
-	### Success Criteria
-	
-	- [ ] `bun test` passes with ≥70% coverage
-	- [ ] No TypeScript errors (strict mode)
-	- [ ] Zero Biome linting issues
-	- [ ] Build succeeds with declarations
-	- [ ] All core services working (Effect.Service pattern)
-	- [ ] Both APIs functional (Effect.Service + Class wrapper)
-	- [ ] fs-json backend persists and retrieves state
-	- [ ] Audit trail recording and querying works
-	- [ ] Example actors (Content, Hiring) implemented and tested
-	- [ ] README demonstrates basic usage
-	
-	### Agent Tasks (Sequenced)
-	
-	1. **Setup** (Day 1)
-	   - Initialize Turborepo, Bun, TypeScript, Biome
-	   - Create package structure
-	   - Configure Vitest, tsconfig, build
-	
-	2. **Types & Specs** (Day 1-2)
-	   - Define ActorSpec, StateDefinition, Transition types
-	   - Build spec validator
-	   - Create SpecRegistry service
-	   - Write spec tests
-	
-	3. **Machine Execution** (Day 2-3)
-	   - Build xState machine from ActorSpec
-	   - Implement guard evaluation
-	   - Implement action execution (context transformation)
-	   - Write machine tests
-	
-	4. **Core Services** (Day 3-4)
-	   - Implement ActorService (main orchestrator)
-	   - Implement StorageProvider interface
-	   - Implement ComputeProvider
-	   - Implement PolicyProvider
-	   - Write service tests
-	
-	5. **Storage Backend** (Day 4-5)
-	   - Implement FsJsonStorageProvider
-	   - Implement audit trail persistence
-	   - Write backend tests
-	
-	6. **Error Types & Class API** (Day 5)
-	   - Define all error types (tagged)
-	   - Create ActorWrapper base class
-	   - Create ContentProductionActor example
-	   - Create HiringPipelineActor example
-	
-	7. **Integration Tests** (Day 6)
-	   - Full workflow tests (execute → persist → audit)
-	   - Error recovery tests
-	   - Multi-step workflows
-	
-	8. **Documentation** (Day 6-7)
-	   - Update README
-	   - Add quick start examples
-	   - Document API surface
-	   - Add error handling guide
+- [x] `bun test` passes with ≥70% coverage
+- [x] No TypeScript errors (strict mode)
+- [x] Zero Biome linting issues
+- [x] Build succeeds with declarations
+- [x] All core services working (Effect.Service pattern)
+- [ ] Both APIs functional (Effect.Service + Class wrapper)
+- [x] fs-json backend persists and retrieves state
+- [ ] Audit trail recording and querying works
+- [x] Example actors implemented and tested
+- [x] README demonstrates basic usage
+
+### Agent Tasks (Sequenced)
+
+1. **Setup** (DONE)
+2. **Types & Specs** (DONE)
+3. **Machine Execution** (DONE)
+4. **Core Services** (DONE)
+5. **Storage Backend** (DONE)
+6. **Error Types & Class API** (IN PROGRESS)
+7. **Integration Tests** (DONE)
+8. **Documentation** (IN PROGRESS)
 	
 	---
 	
@@ -276,7 +183,7 @@ packages/effect-xstate/
 	
 	### Key Files to Create/Update
 
-packages/effect-xstate/
+packages/effect-actor/
 
 ├── src/
 
@@ -416,7 +323,7 @@ packages/effect-xstate/
 	
 	### Key Files to Create/Update
 
-packages/effect-xstate/
+packages/effect-actor/
 
 ├── CHANGELOG.md
 
@@ -447,7 +354,7 @@ Integration examples (in separate apps or docs)
 	### Success Criteria
 	
 	- [ ] effect-env successfully uses ActorService for config
-	- [ ] Wetware CLI fully operational with effect-xstate
+	- [ ] Wetware CLI fully operational with effect-actor
 	- [ ] All integration tests passing
 	- [ ] Package published to npm
 	- [ ] Documentation complete and polished
@@ -509,19 +416,19 @@ Integration examples (in separate apps or docs)
 	| Dependency | Status | Impact | Notes |
 	|-----------|--------|--------|-------|
 	| Turborepo setup | Ready | Phase 1 | Use existing from effect-json |
-	| Effect latest | Ready | All phases | Ensure xState compatible |
-	| xState v5 | Ready | Phase 1 | Core dependency |
+	| Effect latest | Ready | All phases | Ensure state machine compatible |
+	| Effect | Ready | Phase 1 | Core dependency |
 	| effect-json | Ready | Phase 3 | For state persistence |
 	| effect-env | Ready | Phase 3 | For integration |
-	| Wetware CLI | Design | Phase 3 | Depends on ActorSDK |
+	| Wetware CLI | Design | Phase 3 | Depends on StateMachine SDK |
 	
 	---
 	
 	## Risk Mitigation
 	
-	### Risk: xState API Changes
+	### Risk: Effect API Changes
 	
-	**Mitigation**: Pin xState to v5.x; maintain compatibility layer if needed
+	**Mitigation**: Pin state machine to v5.x; maintain compatibility layer if needed
 	
 	### Risk: Spec Validation Complexity
 	
@@ -545,13 +452,13 @@ Integration examples (in separate apps or docs)
 	
 	- **Phase 1 issues**: Simplify ActorService (remove optional features); focus on core execute/query
 	- **Phase 2 issues**: Defer golden fixtures; release with unit tests only; ship Phase 1.5
-	- **Phase 3 issues**: Release ActorSDK independently; delay CLI integration to Phase 4
+	- **Phase 3 issues**: Release StateMachine SDK independently; delay CLI integration to Phase 4
 	
 	---
 	
 	## Success Metrics (Post-Launch)
 	
-	- [ ] effect-xstate npm package published and installable
+	- [ ] effect-actor npm package published and installable
 	- [ ] ≥50 npm weekly downloads (week 1)
 	- [ ] ≥100 npm weekly downloads (month 1)
 	- [ ] Zero critical bugs reported
@@ -589,7 +496,7 @@ Integration examples (in separate apps or docs)
 	## Resources & Roles
 	
 	**Agent Responsibilities**:
-	- Implement core ActorSDK (Phases 1-2)
+	- Implement core StateMachine SDK (Phases 1-2)
 	- Write unit and integration tests
 	- Generate ARCHITECTURE.md and docs
 	- Support CLI integration (Phase 3)

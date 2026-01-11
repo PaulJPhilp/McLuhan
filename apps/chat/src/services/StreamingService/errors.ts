@@ -14,7 +14,7 @@ export class StreamTimeoutError extends Data.TaggedError("StreamTimeoutError")<{
  */
 export class StreamError extends Data.TaggedError("StreamError")<{
 	readonly message: string;
-	readonly cause?: unknown;
+	readonly cause?: unknown | undefined;
 }> {}
 
 /**

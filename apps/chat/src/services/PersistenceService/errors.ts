@@ -14,7 +14,7 @@ export class StorageUnavailableError extends Data.TaggedError(
  */
 export class StorageReadError extends Data.TaggedError("StorageReadError")<{
 	readonly message: string;
-	readonly cause?: unknown;
+	readonly cause?: unknown | undefined;
 }> {}
 
 /**
@@ -22,7 +22,7 @@ export class StorageReadError extends Data.TaggedError("StorageReadError")<{
  */
 export class StorageWriteError extends Data.TaggedError("StorageWriteError")<{
 	readonly message: string;
-	readonly cause?: unknown;
+	readonly cause?: unknown | undefined;
 }> {}
 
 /**
@@ -32,7 +32,7 @@ export class InvalidStorageDataError extends Data.TaggedError(
 	"InvalidStorageDataError",
 )<{
 	readonly message: string;
-	readonly cause?: unknown;
+	readonly cause?: unknown | undefined;
 }> {}
 
 /**

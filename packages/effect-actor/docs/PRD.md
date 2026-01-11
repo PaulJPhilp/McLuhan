@@ -2,7 +2,7 @@
 
 ## Overview
 
-**effect-actor** is a composable, Effect-native actor orchestration framework. It enables developers to define stateful entity lifecycles as TypeScript objects, execute them with type-safe transitions, persist state via pluggable providers, and audit all changes.
+**effect-actor** is a composable, Effect-native state machine orchestration framework. It enables developers to define stateful entity lifecycles as TypeScript objects, execute them with type-safe transitions, persist state via pluggable providers, and audit all changes.
 
 ---
 
@@ -99,7 +99,7 @@ const contentActorSpec = createActorSpec({
 
 ```typescript
 import { Effect } from "effect";
-import { ActorService } from "effect-xstate";
+import { ActorService } from "effect-actor";
 
 // Execute a command (Effect style)
 const effect = Effect.gen(function* () {
@@ -167,7 +167,7 @@ const finalState = await actor.replay("idea-1", upToTimestamp);
 ### 4. Pluggable Storage Providers
 
 ```typescript
-import { StorageProvider } from "effect-xstate";
+import { StorageProvider } from "effect-actor";
 
 // Storage provider interface
 interface StorageProvider {
@@ -553,7 +553,7 @@ export class ValidationError extends Data.TaggedError<"ValidationError"> {}
 | TypeScript strict mode | 100% compliance | Type safety |
 | Test coverage | ≥90% | Reliability |
 | Agent parseable | Clear contracts, examples | AI extensibility |
-| Zero external deps | (except Effect, xState) | Composability |
+| Zero external deps | (except Effect) | Composability |
 
 ---
 
@@ -578,7 +578,7 @@ export class ValidationError extends Data.TaggedError<"ValidationError"> {}
 - Effect.Service + Class API
 
 ### v1.1 (Polish & Integration)
-- Integration with effect-env, effect-xstate CLI
+- Integration with effect-env, effect-actor CLI
 - Performance optimization
 - Community feedback
 - Enhanced examples

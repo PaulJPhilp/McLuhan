@@ -15,7 +15,10 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
-			"effect-artifact": path.resolve(__dirname, "node_modules/effect-artifact/dist/index.js"),
+			"effect-artifact": path.resolve(
+				__dirname,
+				"node_modules/effect-artifact/dist/index.js",
+			),
 		},
 	},
 	server: {

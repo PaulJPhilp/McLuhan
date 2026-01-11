@@ -5,8 +5,8 @@
  * @module Ingest
  */
 
-import type { SupermemoryError } from "@/Errors.js";
 import type { Effect } from "effect";
+import type { SupermemoryError } from "@/Errors.js";
 import type { IngestOptions, IngestResponse } from "./types.js";
 
 /**

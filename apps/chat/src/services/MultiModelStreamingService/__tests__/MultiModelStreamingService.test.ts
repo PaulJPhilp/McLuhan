@@ -276,10 +276,13 @@ describe("MultiModelStreamingService", () => {
 
 		it("should use default batch size of 5 when not specified", async () => {
 			const testMessage = createTestMessage({ content: "Hello" });
-			const modelConfigs: ModelConfig[] = Array.from({ length: 12 }, (_, i) => ({
-				modelId: `model-${i + 1}`,
-				provider: "openai",
-			}));
+			const modelConfigs: ModelConfig[] = Array.from(
+				{ length: 12 },
+				(_, i) => ({
+					modelId: `model-${i + 1}`,
+					provider: "openai",
+				}),
+			);
 
 			const program = Effect.gen(function* () {
 				const service = yield* MultiModelStreamingService;

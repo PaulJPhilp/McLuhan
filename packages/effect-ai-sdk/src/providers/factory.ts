@@ -56,7 +56,9 @@ export function createProvider(
           return createOpenAI({
             apiKey: config.apiKey,
             ...(config.baseURL ? { baseURL: config.baseURL } : {}),
-            ...(config.organization ? { organization: config.organization } : {}),
+            ...(config.organization
+              ? { organization: config.organization }
+              : {}),
             ...(config.project ? { project: config.project } : {}),
           });
 
@@ -162,14 +164,22 @@ export function getLanguageModel(
 
         // Google provider uses languageModel method with API key in options
         try {
-          console.log(`[Google] Creating model ${modelId} with API key length: ${provider._apiKey.length}`);
-          const model = provider._provider.languageModel(modelId, { apiKey: provider._apiKey });
+          console.log(
+            `[Google] Creating model ${modelId} with API key length: ${provider._apiKey.length}`
+          );
+          const model = provider._provider.languageModel(modelId, {
+            apiKey: provider._apiKey,
+          });
           console.log(`[Google] Model ${modelId} created successfully`);
           return model;
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           const errorStack = error instanceof Error ? error.stack : undefined;
-          console.error(`[Google] Failed to create model ${modelId}:`, errorMessage);
+          console.error(
+            `[Google] Failed to create model ${modelId}:`,
+            errorMessage
+          );
           if (errorStack) {
             console.error(`[Google] Error stack:`, errorStack);
           }

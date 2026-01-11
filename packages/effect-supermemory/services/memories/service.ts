@@ -21,12 +21,21 @@ import type {
   Memory,
   MemoryAddParams,
   MemoryAddResponse,
+  MemoryBatchAddParams,
+  MemoryBatchAddResponse,
+  MemoryDeleteBulkParams,
+  MemoryDeleteBulkResponse,
+  MemoryForgetParams,
+  MemoryForgetResponse,
   MemoryListParams,
   MemoryListResponse,
+  MemoryUpdateMemoryParams,
+  MemoryUpdateMemoryResponse,
   MemoryUpdateParams,
   MemoryUpdateResponse,
   MemoryUploadFileParams,
   MemoryUploadFileResponse,
+  MemoryListProcessingResponse,
 } from "./types.js";
 
 /**
@@ -122,6 +131,23 @@ const makeMemoriesService = Effect.gen(function* () {
       })
     );
 
+  const batchAdd = (
+    params: MemoryBatchAddParams
+  ): Effect.Effect<MemoryBatchAddResponse, SupermemoryError> =>
+    Effect.gen(function* () {
+      return yield* httpClient.request<MemoryBatchAddResponse, unknown, never>(
+        HTTP_METHODS.POST,
+        API_ENDPOINTS.MEMORIES.BATCH,
+        { body: params }
+      );
+    }).pipe(
+      Effect.withSpan("supermemory.memories.batchAdd", {
+        attributes: {
+          "supermemory.batch_size": params.documents.length,
+        },
+      })
+    );
+
   const get = (id: string): Effect.Effect<Memory, SupermemoryError> =>
     Effect.gen(function* () {
       // Validate ID is non-empty
@@ -154,10 +180,6 @@ const makeMemoriesService = Effect.gen(function* () {
     params?: MemoryListParams
   ): Effect.Effect<MemoryListResponse, SupermemoryError> =>
     Effect.gen(function* () {
-      // Build query string from params
-      const _queryParams = buildListQueryParams(params);
-
-      // For list, we POST with body containing the params
       const body = params
         ? {
             ...(params.containerTags && {
@@ -176,7 +198,7 @@ const makeMemoriesService = Effect.gen(function* () {
 
       return yield* httpClient.request<MemoryListResponse, unknown, never>(
         HTTP_METHODS.POST,
-        API_ENDPOINTS.MEMORIES.BASE,
+        API_ENDPOINTS.MEMORIES.LIST,
         { body }
       );
     }).pipe(
@@ -187,6 +209,18 @@ const makeMemoriesService = Effect.gen(function* () {
         },
       })
     );
+
+  const listProcessing = (): Effect.Effect<
+    MemoryListProcessingResponse,
+    SupermemoryError
+  > =>
+    httpClient
+      .request<MemoryListProcessingResponse, unknown, never>(
+        HTTP_METHODS.GET,
+        API_ENDPOINTS.MEMORIES.PROCESSING,
+        {}
+      )
+      .pipe(Effect.withSpan("supermemory.memories.listProcessing"));
 
   const update = (
     id: string,
@@ -234,6 +268,17 @@ const makeMemoriesService = Effect.gen(function* () {
       })
     );
 
+  const updateMemory = (
+    params: MemoryUpdateMemoryParams
+  ): Effect.Effect<MemoryUpdateMemoryResponse, SupermemoryError> =>
+    httpClient
+      .request<MemoryUpdateMemoryResponse, unknown, never>(
+        HTTP_METHODS.PATCH,
+        API_ENDPOINTS.MEMORIES.V4,
+        { body: params }
+      )
+      .pipe(Effect.withSpan("supermemory.memories.updateMemory"));
+
   const deleteMemory = (id: string): Effect.Effect<void, SupermemoryError> =>
     Effect.gen(function* () {
       // Validate ID is non-empty
@@ -261,6 +306,28 @@ const makeMemoriesService = Effect.gen(function* () {
         },
       })
     );
+
+  const deleteBulk = (
+    params: MemoryDeleteBulkParams
+  ): Effect.Effect<MemoryDeleteBulkResponse, SupermemoryError> =>
+    httpClient
+      .request<MemoryDeleteBulkResponse, unknown, never>(
+        HTTP_METHODS.DELETE,
+        API_ENDPOINTS.MEMORIES.BULK,
+        { body: params }
+      )
+      .pipe(Effect.withSpan("supermemory.memories.deleteBulk"));
+
+  const forget = (
+    params: MemoryForgetParams
+  ): Effect.Effect<MemoryForgetResponse, SupermemoryError> =>
+    httpClient
+      .request<MemoryForgetResponse, unknown, never>(
+        HTTP_METHODS.DELETE,
+        API_ENDPOINTS.MEMORIES.V4,
+        { body: params }
+      )
+      .pipe(Effect.withSpan("supermemory.memories.forget"));
 
   const uploadFile = (
     params: MemoryUploadFileParams
@@ -302,10 +369,15 @@ const makeMemoriesService = Effect.gen(function* () {
 
   return {
     add,
+    batchAdd,
     get,
     list,
+    listProcessing,
     update,
+    updateMemory,
     delete: deleteMemory,
+    deleteBulk,
+    forget,
     uploadFile,
   } satisfies MemoriesServiceApi;
 });

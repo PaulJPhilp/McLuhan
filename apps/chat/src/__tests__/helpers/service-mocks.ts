@@ -22,8 +22,7 @@ export function createMockArtifactExtractionService(
 ): Layer.Layer<ArtifactExtractionService> {
 	return Layer.succeed(ArtifactExtractionService, {
 		extractFromContent:
-			extractFromContent ||
-			(() => Effect.succeed([] as readonly Artifact[])),
+			extractFromContent || (() => Effect.succeed([] as readonly Artifact[])),
 	} satisfies ArtifactExtractionServiceSchema);
 }
 
@@ -117,9 +116,7 @@ export function createCodeExtractionMock(): Layer.Layer<ArtifactExtractionServic
 export function createTestServiceLayer(
 	extractionLayer?: Layer.Layer<ArtifactExtractionService>,
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
-): Layer.Layer<
-	ArtifactExtractionService | ArtifactStorageService
-> {
+): Layer.Layer<ArtifactExtractionService | ArtifactStorageService> {
 	return Layer.mergeAll(
 		extractionLayer || createMockArtifactExtractionService(),
 		storageLayer || createMockArtifactStorageService(),

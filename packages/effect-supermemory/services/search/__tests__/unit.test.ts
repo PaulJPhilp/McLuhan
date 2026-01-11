@@ -268,7 +268,11 @@ describe("Filter Builder", () => {
     it("creates a tag filter", () => {
       const filter = Filter.tag("my-tag");
       const json = toJSON(filter);
-      expect(json).toEqual({ tag: "my-tag" });
+      expect(json).toEqual({
+        key: "tags",
+        value: "my-tag",
+        filterType: "array_contains",
+      });
     });
   });
 
@@ -276,45 +280,76 @@ describe("Filter Builder", () => {
     it("creates an equality filter", () => {
       const filter = Filter.meta("author", "eq", "Paul");
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.author": "Paul" });
+      expect(json).toEqual({
+        key: "author",
+        value: "Paul",
+        filterType: "metadata",
+      });
     });
 
     it("creates a greater than filter", () => {
       const filter = Filter.meta("count", "gt", 10);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.count": { $gt: 10 } });
+      expect(json).toEqual({
+        key: "count",
+        value: "10",
+        filterType: "numeric",
+        numericOperator: ">",
+      });
     });
 
     it("creates a less than filter", () => {
       const filter = Filter.meta("score", "lt", 0.5);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.score": { $lt: 0.5 } });
+      expect(json).toEqual({
+        key: "score",
+        value: "0.5",
+        filterType: "numeric",
+        numericOperator: "<",
+      });
     });
 
     it("creates an in filter", () => {
       const filter = Filter.meta("status", "in", ["active", "pending"]);
       const json = toJSON(filter);
       expect(json).toEqual({
-        "metadata.status": { $in: ["active", "pending"] },
+        key: "status",
+        value: "active",
+        filterType: "array_contains",
       });
     });
 
     it("creates a not equal filter", () => {
       const filter = Filter.meta("deleted", "ne", true);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.deleted": { $ne: true } });
+      expect(json).toEqual({
+        key: "deleted",
+        value: "true",
+        filterType: "metadata",
+        negate: true,
+      });
     });
 
     it("creates a greater than or equal filter", () => {
       const filter = Filter.meta("version", "gte", 2);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.version": { $gte: 2 } });
+      expect(json).toEqual({
+        key: "version",
+        value: "2",
+        filterType: "numeric",
+        numericOperator: ">=",
+      });
     });
 
     it("creates a less than or equal filter", () => {
       const filter = Filter.meta("priority", "lte", 5);
       const json = toJSON(filter);
-      expect(json).toEqual({ "metadata.priority": { $lte: 5 } });
+      expect(json).toEqual({
+        key: "priority",
+        value: "5",
+        filterType: "numeric",
+        numericOperator: "<=",
+      });
     });
   });
 
@@ -326,7 +361,10 @@ describe("Filter Builder", () => {
       );
       const json = toJSON(filter);
       expect(json).toEqual({
-        $and: [{ tag: "archived" }, { "metadata.author": "Paul" }],
+        AND: [
+          { key: "tags", value: "archived", filterType: "array_contains" },
+          { key: "author", value: "Paul", filterType: "metadata" },
+        ],
       });
     });
 
@@ -337,7 +375,7 @@ describe("Filter Builder", () => {
         Filter.meta("year", "gte", 2020)
       );
       const json = toJSON(filter);
-      expect(json.$and).toHaveLength(3);
+      expect(json.AND).toHaveLength(3);
     });
   });
 
@@ -346,7 +384,10 @@ describe("Filter Builder", () => {
       const filter = Filter.or(Filter.tag("important"), Filter.tag("urgent"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $or: [{ tag: "important" }, { tag: "urgent" }],
+        OR: [
+          { key: "tags", value: "important", filterType: "array_contains" },
+          { key: "tags", value: "urgent", filterType: "array_contains" },
+        ],
       });
     });
   });
@@ -356,7 +397,10 @@ describe("Filter Builder", () => {
       const filter = Filter.not(Filter.tag("deleted"));
       const json = toJSON(filter);
       expect(json).toEqual({
-        $not: { tag: "deleted" },
+        key: "tags",
+        value: "deleted",
+        filterType: "array_contains",
+        negate: true,
       });
     });
   });
@@ -371,10 +415,10 @@ describe("Filter Builder", () => {
         )
       );
       const json = toJSON(filter);
-      const andArray = json.$and as unknown[];
+      const andArray = json.AND as unknown[];
       expect(andArray).toHaveLength(2);
-      const orClause = andArray[1] as { $or: unknown[] };
-      expect(orClause.$or).toHaveLength(2);
+      const orClause = andArray[1] as { OR: unknown[] };
+      expect(orClause.OR).toHaveLength(2);
     });
 
     it("supports NOT with complex expressions", () => {
@@ -382,8 +426,8 @@ describe("Filter Builder", () => {
         Filter.and(Filter.tag("archived"), Filter.meta("deleted", "eq", true))
       );
       const json = toJSON(filter);
-      const notClause = json.$not as { $and: unknown[] };
-      expect(notClause.$and).toHaveLength(2);
+      expect(json.negate).toBe(true);
+      expect(json.AND).toHaveLength(2);
     });
   });
 });
@@ -412,8 +456,8 @@ describe("Search Helpers", () => {
 
     it("excludes rerank when false (only truthy values included)", () => {
       const result = buildSearchParams("test", { rerank: false });
-      // rerank is only included when truthy
-      expect(result).toEqual({ query: "test" });
+      // Now it's included even if false
+      expect(result).toEqual({ query: "test", rerank: false });
     });
 
     it("includes filters when provided", () => {
@@ -421,7 +465,11 @@ describe("Search Helpers", () => {
       const result = buildSearchParams("test", { filters: filter });
       expect(result).toEqual({
         query: "test",
-        filters: { tag: "archived" },
+        filters: {
+          key: "tags",
+          value: "archived",
+          filterType: "array_contains",
+        },
       });
     });
 
@@ -442,7 +490,10 @@ describe("Search Helpers", () => {
         threshold: 0.7,
         rerank: true,
         filters: {
-          $and: [{ tag: "archived" }, { "metadata.author": "Paul" }],
+          AND: [
+            { key: "tags", value: "archived", filterType: "array_contains" },
+            { key: "author", value: "Paul", filterType: "metadata" },
+          ],
         },
       });
     });

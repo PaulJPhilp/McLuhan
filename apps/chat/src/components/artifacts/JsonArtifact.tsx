@@ -13,7 +13,10 @@ interface JsonArtifactProps {
 export const JsonArtifact: FC<JsonArtifactProps> = ({ artifact }) => {
 	const [copied, setCopied] = useState(false);
 
-	if (artifact.type.category !== "data" || artifact.type.dataFormat !== "json") {
+	if (
+		artifact.type.category !== "data" ||
+		artifact.type.dataFormat !== "json"
+	) {
 		return null;
 	}
 

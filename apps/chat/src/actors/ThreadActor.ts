@@ -36,7 +36,7 @@ export type ThreadMessage =
 			payload: {
 				role: "user" | "assistant" | "system";
 				content: string;
-				metadata?: Record<string, unknown>;
+				metadata?: Record<string, unknown> | undefined;
 			};
 	  }
 	| { type: "CLEAR_MESSAGES" }
@@ -79,7 +79,9 @@ export const createThreadActorConfig = () => {
 						role: newMessage.role,
 						contentLength: newMessage.content.length,
 						hasMetadata: !!newMessage.metadata,
-						metadataKeys: newMessage.metadata ? Object.keys(newMessage.metadata) : [],
+						metadataKeys: newMessage.metadata
+							? Object.keys(newMessage.metadata)
+							: [],
 					});
 
 					return {

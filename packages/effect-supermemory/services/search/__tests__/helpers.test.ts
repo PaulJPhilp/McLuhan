@@ -29,7 +29,11 @@ describe("Search Helpers", () => {
       const result = buildSearchParams("test", { filters: filter });
       expect(result).toEqual({
         query: "test",
-        filters: { tag: "archived" },
+        filters: {
+          key: "tags",
+          value: "archived",
+          filterType: "array_contains",
+        },
       });
     });
 
@@ -50,7 +54,10 @@ describe("Search Helpers", () => {
         threshold: 0.7,
         rerank: true,
         filters: {
-          $and: [{ tag: "archived" }, { "metadata.author": "Paul" }],
+          AND: [
+            { key: "tags", value: "archived", filterType: "array_contains" },
+            { key: "author", value: "Paul", filterType: "metadata" },
+          ],
         },
       });
     });
