@@ -20,7 +20,9 @@ Hope that helps!`;
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("code");
-			expect(artifacts[0]?.type.language).toBe("typescript");
+			if (artifacts[0]?.type.category === "code") {
+				expect(artifacts[0].type.language).toBe("typescript");
+			}
 			expect(artifacts[0]?.content).toContain("function greet");
 		});
 
@@ -48,7 +50,9 @@ Hope that helps!`;
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("data");
-			expect(artifacts[0]?.type.dataFormat).toBe("json");
+			if (artifacts[0]?.type.category === "data") {
+				expect(artifacts[0].type.dataFormat).toBe("json");
+			}
 			expect(artifacts[0]?.content).toContain("my-app");
 		});
 
@@ -74,7 +78,9 @@ flowchart TD
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("diagram");
-			expect(artifacts[0]?.type.diagramType).toBe("mermaid");
+			if (artifacts[0]?.type.category === "diagram") {
+				expect(artifacts[0].type.diagramType).toBe("mermaid");
+			}
 			expect(artifacts[0]?.content).toContain("flowchart");
 		});
 
@@ -102,8 +108,12 @@ And here's a JSON example:
 			const artifacts = yield* extraction.extractFromContent(content);
 
 			expect(artifacts).toHaveLength(2);
-			expect(artifacts[0]?.type.language).toBe("python");
-			expect(artifacts[1]?.type.dataFormat).toBe("json");
+			if (artifacts[0]?.type.category === "code") {
+				expect(artifacts[0].type.language).toBe("python");
+			}
+			if (artifacts[1]?.type.category === "data") {
+				expect(artifacts[1].type.dataFormat).toBe("json");
+			}
 		});
 
 		await Effect.runPromise(
@@ -126,7 +136,9 @@ And here's a JSON example:
 
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]?.type.category).toBe("diagram");
-			expect(artifacts[0]?.type.diagramType).toBe("svg");
+			if (artifacts[0]?.type.category === "diagram") {
+				expect(artifacts[0].type.diagramType).toBe("svg");
+			}
 		});
 
 		await Effect.runPromise(
@@ -164,8 +176,8 @@ console.log("test");
 			);
 
 			expect(artifacts).toHaveLength(1);
-			expect(artifacts[0]?.metadata.modelProvider).toBe("anthropic");
-			expect(artifacts[0]?.metadata.modelId).toBe("claude-3-sonnet");
+			expect(artifacts[0]?.metadata.modelInfo?.provider).toBe("anthropic");
+			expect(artifacts[0]?.metadata.modelInfo?.model).toBe("claude-3-sonnet");
 		});
 
 		await Effect.runPromise(

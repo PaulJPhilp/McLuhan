@@ -41,16 +41,16 @@ function getSharedRuntime() {
 
 export const sharedRuntime = {
 	get runPromise() {
-		return getSharedRuntime().runPromise.bind(getSharedRuntime());
+		return getSharedRuntime()!.runPromise.bind(getSharedRuntime()!);
 	},
 	get runSync() {
-		return getSharedRuntime().runSync.bind(getSharedRuntime());
+		return getSharedRuntime()!.runSync.bind(getSharedRuntime()!);
 	},
 	get runPromiseExit() {
-		return getSharedRuntime().runPromiseExit.bind(getSharedRuntime());
+		return getSharedRuntime()!.runPromiseExit.bind(getSharedRuntime()!);
 	},
 	get runSyncExit() {
-		return getSharedRuntime().runSyncExit.bind(getSharedRuntime());
+		return getSharedRuntime()!.runSyncExit.bind(getSharedRuntime()!);
 	},
 } as ReturnType<typeof ManagedRuntime.make>;
 
@@ -69,9 +69,9 @@ function getAtomRuntime() {
 
 export const atomRuntime = {
 	get atom() {
-		return getAtomRuntime().atom.bind(getAtomRuntime());
+		return getAtomRuntime()!.atom.bind(getAtomRuntime()!);
 	},
 	get fn() {
-		return getAtomRuntime().fn.bind(getAtomRuntime());
+		return getAtomRuntime()!.fn.bind(getAtomRuntime()!);
 	},
 } as ReturnType<typeof Atom.runtime>;

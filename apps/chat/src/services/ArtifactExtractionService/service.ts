@@ -8,7 +8,7 @@ import { Effect } from "effect";
 import {
 	extractArtifactsFromString,
 	type Artifact,
-} from "../../../../../../Hume/packages/effect-artifact/dist/index.js";
+} from "effect-artifact";
 
 export interface ArtifactExtractionServiceSchema {
 	readonly extractFromContent: (

@@ -25,6 +25,7 @@
 		"effect": "^3.19.14",
 		"effect-actor": "workspace:*",
 		"effect-ai-sdk": "workspace:*",
+		"effect-artifact": "file:../../../Hume/packages/effect-artifact",
 		"effect-env": "^0.4.1",
 		"hume": "^0.7.2",
 		"lucide-react": "latest",

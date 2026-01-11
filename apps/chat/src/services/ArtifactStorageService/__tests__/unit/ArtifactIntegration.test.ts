@@ -58,16 +58,20 @@ And here's a JSON test case:
 			const retrieved = yield* storage.getArtifacts(messageId);
 
 			expect(retrieved).toHaveLength(2);
-			expect(retrieved[0]?.type.language).toBe("python");
-			expect(retrieved[1]?.type.dataFormat).toBe("json");
+			if (retrieved[0]?.type.category === "code") {
+				expect(retrieved[0].type.language).toBe("python");
+			}
+			if (retrieved[1]?.type.category === "data") {
+				expect(retrieved[1].type.dataFormat).toBe("json");
+			}
 
 			// Verify content is preserved
 			expect(retrieved[0]?.content).toContain("factorial");
 			expect(retrieved[1]?.content).toContain("test_cases");
 
 			// Verify metadata is preserved
-			expect(retrieved[0]?.metadata.modelProvider).toBe("openai");
-			expect(retrieved[0]?.metadata.modelId).toBe("gpt-4-turbo");
+			expect(retrieved[0]?.metadata.modelInfo?.provider).toBe("openai");
+			expect(retrieved[0]?.metadata.modelInfo?.model).toBe("gpt-4-turbo");
 		});
 
 		const layer = Layer.mergeAll(
@@ -110,8 +114,12 @@ interface Message {
 
 			expect(retrieved1).toHaveLength(1);
 			expect(retrieved2).toHaveLength(1);
-			expect(retrieved1[0]?.type.language).toBe("javascript");
-			expect(retrieved2[0]?.type.language).toBe("typescript");
+			if (retrieved1[0]?.type.category === "code") {
+				expect(retrieved1[0].type.language).toBe("javascript");
+			}
+			if (retrieved2[0]?.type.category === "code") {
+				expect(retrieved2[0].type.language).toBe("typescript");
+			}
 
 			// Verify storage stats show both
 			const stats = yield* storage.getStorageStats();

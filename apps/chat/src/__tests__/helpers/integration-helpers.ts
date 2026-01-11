@@ -87,8 +87,10 @@ export async function testArtifactStorage(
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
 ): Promise<{
 	saved: Artifact[];
-	retrieved: Artifact[];
-	stats: Awaited<ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>>;
+	retrieved: readonly Artifact[];
+	stats: Effect.Effect.Success<
+		ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>
+	>;
 }> {
 	const program = Effect.gen(function* () {
 		const storage = yield* ArtifactStorageService;
@@ -119,9 +121,11 @@ export async function testArtifactFlow(
 	extractionLayer?: Layer.Layer<ArtifactExtractionService>,
 	storageLayer?: Layer.Layer<ArtifactStorageService>,
 ): Promise<{
-	extracted: Artifact[];
-	retrieved: Artifact[];
-	stats: Awaited<ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>>;
+	extracted: readonly Artifact[];
+	retrieved: readonly Artifact[];
+	stats: Effect.Effect.Success<
+		ReturnType<ArtifactStorageServiceSchema["getStorageStats"]>
+	>;
 }> {
 	const program = Effect.gen(function* () {
 		const extraction = yield* ArtifactExtractionService;

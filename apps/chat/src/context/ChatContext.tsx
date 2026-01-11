@@ -75,7 +75,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 		isLoading: false,
 		error: undefined,
 		lastUpdated: Date.now(),
-	}));
+	})) as ThreadState;
 
 	// Helper to send a message to ThreadService and invalidate atom to trigger refresh
 	const sendToThreadService = useCallback(
@@ -493,7 +493,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 					const results = await sharedRuntime.runPromise(
 						multiModelProgram.pipe(
 							Effect.provide(MultiModelStreamingService.Default()),
-							Effect.catchAll((error) => {
+							Effect.catchAll((error: any) => {
 								const errorMessage =
 									error instanceof Error ? error.message : String(error);
 								return Effect.fail(new Error(errorMessage));
@@ -573,7 +573,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 
 					const result = await sharedRuntime.runPromise(
 						streamProgram.pipe(
-							Effect.catchAll((error) => {
+							Effect.catchAll((error: any) => {
 								const errorMessage =
 									error instanceof Error ? error.message : String(error);
 								if (errorMessage.includes("API key")) {

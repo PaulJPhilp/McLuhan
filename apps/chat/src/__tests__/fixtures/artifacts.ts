@@ -20,6 +20,9 @@ export function createTestCodeArtifact(
 		metadata: {
 			title: "Example Function",
 			tags: ["example", "test"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 		...overrides,
 	};

@@ -16,6 +16,9 @@ describe("ArtifactStorageService", () => {
 		metadata: {
 			title: "Example Function",
 			tags: ["example"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 	});
 
@@ -192,25 +195,44 @@ describe("ArtifactStorageService", () => {
 	});
 
 	it("should handle different artifact types", async () => {
+		const now = new Date();
 		const codeArtifact: Artifact = {
 			id: "code-1",
 			type: { category: "code", language: "javascript" },
 			content: "console.log('hello');",
-			metadata: { title: "JS Code" },
+			metadata: {
+				title: "JS Code",
+				version: "1.0.0",
+				created: now,
+				updated: now,
+				tags: [],
+			},
 		};
 
 		const jsonArtifact: Artifact = {
 			id: "json-1",
 			type: { category: "data", dataFormat: "json" },
 			content: '{"key": "value"}',
-			metadata: { title: "JSON Data" },
+			metadata: {
+				title: "JSON Data",
+				version: "1.0.0",
+				created: now,
+				updated: now,
+				tags: [],
+			},
 		};
 
 		const mermaidArtifact: Artifact = {
 			id: "mermaid-1",
 			type: { category: "diagram", diagramType: "mermaid" },
 			content: "graph LR\\n  A --> B",
-			metadata: { title: "Diagram" },
+			metadata: {
+				title: "Diagram",
+				version: "1.0.0",
+				created: now,
+				updated: now,
+				tags: [],
+			},
 		};
 
 		const program = Effect.gen(function* () {

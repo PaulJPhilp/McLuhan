@@ -411,6 +411,6 @@ See full type definitions in:
 
 ## Related Links
 
-- **effect-artifact**: `/Users/paul/Projects/Trinity/Hume/packages/effect-artifact`
+- **effect-artifact**: `../Hume/packages/effect-artifact`
 - **Chatapp**: `/Users/paul/Projects/Trinity/McLuhan/apps/chat`
 - **CLI Examples**: `/Users/paul/Projects/Trinity/McLuhan/packages/effect-cli-tui/examples`

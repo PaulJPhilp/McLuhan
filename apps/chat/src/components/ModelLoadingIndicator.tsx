@@ -4,7 +4,7 @@ import { getModelColor } from "../services/ModelConfigService/index.js";
 export interface ModelLoadingIndicatorProps {
 	modelId: string;
 	provider: string;
-	displayName?: string;
+	displayName?: string | undefined;
 }
 
 /**

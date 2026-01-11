@@ -1,6 +1,6 @@
 import { FC, useMemo, useState } from "react";
 import type { Artifact } from "effect-artifact";
-import JSONTree from "react-json-tree";
+import { JSONTree } from "react-json-tree";
 import { Copy, Check } from "lucide-react";
 
 interface JsonArtifactProps {
