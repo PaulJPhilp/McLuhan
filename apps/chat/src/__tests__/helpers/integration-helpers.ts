@@ -56,7 +56,7 @@ export async function testArtifactExtraction(
 	content: string,
 	extractionLayer?: Layer.Layer<ArtifactExtractionService>,
 	expectedCount?: number,
-): Promise<Artifact[]> {
+): Promise<readonly Artifact[]> {
 	const program = Effect.gen(function* () {
 		const extraction = yield* ArtifactExtractionService;
 		return yield* extraction.extractFromContent(content);
@@ -104,7 +104,7 @@ export async function testArtifactStorage(
 		// Get stats
 		const stats = yield* storage.getStorageStats();
 
-		return { saved: artifacts, retrieved, stats };
+		return { saved: artifacts, retrieved: retrieved as any, stats: stats as any };
 	});
 
 	const testLayer = storageLayer || createMockArtifactStorageService();

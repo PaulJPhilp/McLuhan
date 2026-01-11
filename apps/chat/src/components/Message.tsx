@@ -51,11 +51,15 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 	// Get model info from metadata if present
 	const modelId =
 		message.metadata && typeof message.metadata === "object"
-			? (message.metadata as Record<string, unknown>).modelId
+			? (message.metadata as Record<string, unknown>).modelId as
+					| string
+					| undefined
 			: undefined;
 	const modelProvider =
 		message.metadata && typeof message.metadata === "object"
-			? (message.metadata as Record<string, unknown>).modelProvider
+			? (message.metadata as Record<string, unknown>).modelProvider as
+					| string
+					| undefined
 			: undefined;
 	const metrics =
 		message.metadata &&
@@ -228,7 +232,8 @@ export const MessageComponent: FC<MessageProps> = ({ message }) => {
 								color: modelColor?.text || "#6b7280",
 							}}
 						>
-							{typeof modelProvider === "string" ? modelProvider : ""} {modelId}
+							{(typeof modelProvider === "string" ? modelProvider : "") as any}{" "}
+							{(modelId as any) || ""}
 						</span>
 					)}
 					{/* Display metrics for assistant messages */}

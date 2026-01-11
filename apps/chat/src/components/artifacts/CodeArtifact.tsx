@@ -54,7 +54,7 @@ export const CodeArtifact: FC<CodeArtifactProps> = ({ artifact }) => {
 						{tokens.map((line, i) => {
 							const { key, ...lineProps } = getLineProps({ line, key: i });
 							return (
-								<div key={key} {...lineProps} className="flex">
+								<div key={key as any} {...lineProps} className="flex">
 									<span className="select-none pr-4 text-gray-500 w-12 text-right">
 										{i + 1}
 									</span>
@@ -64,7 +64,7 @@ export const CodeArtifact: FC<CodeArtifactProps> = ({ artifact }) => {
 												token,
 												key,
 											});
-											return <span key={tokenKey} {...tokenProps} />;
+											return <span key={tokenKey as any} {...tokenProps} />;
 										})}
 									</div>
 								</div>

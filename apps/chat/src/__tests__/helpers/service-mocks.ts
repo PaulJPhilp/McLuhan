@@ -21,9 +21,10 @@ export function createMockArtifactExtractionService(
 	) => Effect.Effect<readonly Artifact[]>,
 ): Layer.Layer<ArtifactExtractionService> {
 	return Layer.succeed(ArtifactExtractionService, {
+		_tag: "ArtifactExtractionService",
 		extractFromContent:
 			extractFromContent || (() => Effect.succeed([] as readonly Artifact[])),
-	} satisfies ArtifactExtractionServiceSchema);
+	} as any);
 }
 
 /**
@@ -36,6 +37,7 @@ export function createMockArtifactStorageService(
 	const storage = initialData || new Map<string, Artifact[]>();
 
 	return Layer.succeed(ArtifactStorageService, {
+		_tag: "ArtifactStorageService",
 		saveArtifacts: (messageId: string, artifacts: readonly Artifact[]) =>
 			Effect.sync(() => {
 				storage.set(messageId, [...artifacts]);
@@ -79,7 +81,7 @@ export function createMockArtifactStorageService(
 				// In real tests, track timestamps if needed
 				return keysToDelete.length;
 			}),
-	} satisfies ArtifactStorageServiceSchema);
+	} as any);
 }
 
 /**

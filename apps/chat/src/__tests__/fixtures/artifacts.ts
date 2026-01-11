@@ -45,6 +45,9 @@ export function createTestMermaidArtifact(
 		metadata: {
 			title: "Example Flowchart",
 			tags: ["diagram", "flowchart"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 		...overrides,
 	};
@@ -72,6 +75,9 @@ export function createTestJsonArtifact(
 		metadata: {
 			title: "User Data",
 			tags: ["json", "data"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 		...overrides,
 	};
@@ -91,6 +97,9 @@ export function createTestSvgArtifact(overrides?: Partial<Artifact>): Artifact {
 		metadata: {
 			title: "SVG Diagram",
 			tags: ["svg", "diagram"],
+			version: "1.0.0",
+			created: new Date(),
+			updated: new Date(),
 		},
 		...overrides,
 	};

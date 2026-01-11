@@ -34,7 +34,7 @@ function getServiceLayer() {
 let _sharedRuntime: ReturnType<typeof ManagedRuntime.make> | undefined;
 function getSharedRuntime() {
 	if (!_sharedRuntime) {
-		_sharedRuntime = ManagedRuntime.make(getServiceLayer());
+		_sharedRuntime = ManagedRuntime.make(getServiceLayer() as any);
 	}
 	return _sharedRuntime;
 }
@@ -62,7 +62,7 @@ export const sharedRuntime = {
 let _atomRuntime: ReturnType<typeof Atom.runtime> | undefined;
 function getAtomRuntime() {
 	if (!_atomRuntime) {
-		_atomRuntime = Atom.runtime(getServiceLayer());
+		_atomRuntime = Atom.runtime(getServiceLayer() as any);
 	}
 	return _atomRuntime;
 }
