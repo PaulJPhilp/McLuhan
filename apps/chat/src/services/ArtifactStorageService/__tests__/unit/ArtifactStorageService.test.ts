@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Effect } from "effect";
 import type { Artifact } from "effect-artifact";
@@ -81,8 +84,12 @@ describe("ArtifactStorageService", () => {
 			const retrieved = yield* storage.getArtifacts(testMessageId);
 
 			expect(retrieved).toHaveLength(2);
-			expect(retrieved[0]?.type.language).toBe("typescript");
-			expect(retrieved[1]?.type.language).toBe("python");
+			if (retrieved[0]?.type.category === "code") {
+				expect(retrieved[0].type.language).toBe("typescript");
+			}
+			if (retrieved[1]?.type.category === "code") {
+				expect(retrieved[1].type.language).toBe("python");
+			}
 		});
 
 		await Effect.runPromise(

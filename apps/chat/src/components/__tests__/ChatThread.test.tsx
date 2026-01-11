@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, beforeEach } from "vitest";
 import { screen, waitFor, act } from "@testing-library/react";
 import { useEffect } from "react";

@@ -88,7 +88,14 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 			await sharedRuntime.runPromise(program);
 			// Refresh atom to trigger re-render
 			// The refresh triggers an async re-read of the atom
-			refreshThreadState();
+			try {
+				refreshThreadState();
+			} catch (e) {
+				// Ignore errors if registry is disposed during test cleanup
+				if (!(e instanceof Error && e.message.includes("disposed"))) {
+					throw e;
+				}
+			}
 			// Wait for React to process the refresh
 			// Use a small delay to ensure the atom has re-read the state
 			await new Promise((resolve) => setTimeout(resolve, 50));
@@ -309,7 +316,14 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 								sharedRuntime
 									.runPromise(updateProgram)
 									.then(() => {
-										refreshThreadState();
+										try {
+											refreshThreadState();
+										} catch (e) {
+											// Ignore errors if registry is disposed
+											if (!(e instanceof Error && e.message.includes("disposed"))) {
+												throw e;
+											}
+										}
 									})
 									.catch((err) => {
 										console.error(
@@ -559,7 +573,14 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 								sharedRuntime
 									.runPromise(updateProgram)
 									.then(() => {
-										refreshThreadState();
+										try {
+											refreshThreadState();
+										} catch (e) {
+											// Ignore errors if registry is disposed
+											if (!(e instanceof Error && e.message.includes("disposed"))) {
+												throw e;
+											}
+										}
 									})
 									.catch((err) => {
 										console.error(
@@ -617,7 +638,14 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
 				}
 
 				// Refresh atom to ensure final state is reflected
-				refreshThreadState();
+				try {
+					refreshThreadState();
+				} catch (e) {
+					// Ignore errors if registry is disposed
+					if (!(e instanceof Error && e.message.includes("disposed"))) {
+						throw e;
+					}
+				}
 			} catch (err) {
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error occurred";

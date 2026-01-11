@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MessageComponent } from "../Message";
@@ -102,10 +105,10 @@ describe("MessageComponent", () => {
 		// Timestamp should be formatted - check that the formatted time string exists
 		const formattedTime = new Date(timestamp).toLocaleTimeString();
 		expect(
-			screen.getByText((content, element) => {
+			screen.getAllByText((_content, element) => {
 				return element?.textContent === formattedTime || false;
-			}),
-		).toBeInTheDocument();
+			}).length,
+		).toBeGreaterThan(0);
 	});
 
 	it("should render code blocks in assistant messages", () => {

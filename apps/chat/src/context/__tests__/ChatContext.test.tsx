@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { screen, waitFor, act } from "@testing-library/react";
 import { ChatProvider, useChatContext } from "../ChatContext";

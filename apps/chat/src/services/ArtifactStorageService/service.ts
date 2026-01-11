@@ -115,14 +115,15 @@ export class ArtifactStorageService extends Effect.Service<ArtifactStorageServic
 			const getArtifacts = (
 				messageId: string,
 			): Effect.Effect<readonly Artifact[], ArtifactStorageError> =>
-				Effect.sync(() => {
-					try {
+				Effect.try({
+					try: () => {
 						const key = `${STORAGE_KEY_PREFIX}${messageId}`;
 						const data = localStorage.getItem(key);
 						return data ? (JSON.parse(data) as Artifact[]) : [];
-					} catch (error) {
+					},
+					catch: (error) => {
 						const code = getErrorCode(error);
-						throw new ArtifactStorageError({
+						return new ArtifactStorageError({
 							message:
 								code === "INVALID_DATA"
 									? "Stored data is corrupted. Try clearing artifacts for this message."
@@ -130,7 +131,7 @@ export class ArtifactStorageService extends Effect.Service<ArtifactStorageServic
 							code,
 							cause: error instanceof Error ? error : undefined,
 						});
-					}
+					},
 				});
 
 			const deleteArtifacts = (

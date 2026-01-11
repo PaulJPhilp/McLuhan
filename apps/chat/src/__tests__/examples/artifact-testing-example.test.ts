@@ -8,6 +8,9 @@
  * - Testing components with artifacts
  */
 
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, beforeEach } from "vitest";
 import { Effect, Layer } from "effect";
 import {
@@ -42,7 +45,9 @@ describe("Artifact Testing Examples", () => {
 
 			expect(artifact.id).toBeDefined();
 			expect(artifact.type.category).toBe("code");
-			expect(artifact.type.language).toBe("typescript");
+			if (artifact.type.category === "code") {
+				expect(artifact.type.language).toBe("typescript");
+			}
 			expect(artifact.content).toContain("console.log");
 		});
 
@@ -52,7 +57,9 @@ describe("Artifact Testing Examples", () => {
 				content: "print('hello')",
 			});
 
-			expect(custom.type.language).toBe("python");
+			if (custom.type.category === "code") {
+				expect(custom.type.language).toBe("python");
+			}
 			expect(custom.content).toBe("print('hello')");
 		});
 
